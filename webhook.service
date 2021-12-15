@@ -5,8 +5,8 @@ After=network.target
 [Service]
 Environment=PATH=/home/ubuntu/.nvm/versions/node/v14.18.2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
 Type=simple
-User=ubuntu #replace with your name, if changed from default ubuntu user
-ExecStart=/home/ubuntu/deploy.ink/start.sh #replace with your name, if changed from default ubuntu user
+User=ubuntu
+ExecStart=/home/ubuntu/deploy.ink/start.sh
 Restart=on-failure
 
 [Install]
