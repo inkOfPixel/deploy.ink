@@ -30,7 +30,7 @@ export default function Index() {
     <div className=" p-10">
       <main>
         <h2 className="text-4xl font-extrabold text-gray-200 tracking-tight">
-          Welcome to Deploy.ink 🚀
+          Welcome to Deploy.ink!! 🚀
         </h2>
       </main>
     </div>
