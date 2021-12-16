@@ -9,6 +9,7 @@ export const action: ActionFunction = async ({ request }) => {
   if (!GITHUB_WEBHOOK_SECRET) {
     return json({ message: "GITHUB_WEBHOOK_SECRET not set" }, 500);
   }
+  console.log("GITHUB_WEBHOOK_SECRET", GITHUB_WEBHOOK_SECRET);
   console.log("🪝 GITHUB WEBHOOK");
   const signature = request.headers.get("X-Hub-Signature");
   const generatedSignature = `sha1=${crypto
