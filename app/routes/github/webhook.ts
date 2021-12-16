@@ -12,10 +12,12 @@ export const action: ActionFunction = async ({ request }) => {
   console.log("GITHUB_WEBHOOK_SECRET", GITHUB_WEBHOOK_SECRET);
   console.log("🪝 GITHUB WEBHOOK");
   const signature = request.headers.get("X-Hub-Signature");
+  console.log("🪝 signature", signature);
   const generatedSignature = `sha1=${crypto
     .createHmac("sha1", GITHUB_WEBHOOK_SECRET)
     .update(JSON.stringify(request.body))
     .digest("hex")}`;
+  console.log("🪝 generatedSignature", generatedSignature);
 
   if (signature !== generatedSignature) {
     return json({ message: "Signature mismatch" }, 401);
