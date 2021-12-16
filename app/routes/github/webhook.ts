@@ -9,20 +9,20 @@ export const action: ActionFunction = async ({ request }) => {
   if (!GITHUB_WEBHOOK_SECRET) {
     return json({ message: "GITHUB_WEBHOOK_SECRET not set" }, 500);
   }
+  const payload = await request.json();
   console.log("GITHUB_WEBHOOK_SECRET", GITHUB_WEBHOOK_SECRET);
   console.log("🪝 GITHUB WEBHOOK");
   const signature = request.headers.get("X-Hub-Signature");
   console.log("🪝 signature", signature);
   const generatedSignature = `sha1=${crypto
     .createHmac("sha1", GITHUB_WEBHOOK_SECRET)
-    .update(JSON.stringify(request.body))
+    .update(JSON.stringify(payload))
     .digest("hex")}`;
   console.log("🪝 generatedSignature", generatedSignature);
 
   if (signature !== generatedSignature) {
     return json({ message: "Signature mismatch" }, 401);
   }
-  const payload = await request.json();
   const event = request.headers.get("X-GitHub-Event");
   const response: any = {
     message: `Webhook received: ${event}`,
