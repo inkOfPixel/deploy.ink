@@ -1,6 +1,9 @@
 import { ActionFunction, json } from "remix";
 import crypto from "crypto";
-import { execa } from "execa";
+import { promisify } from "util";
+import child from "child_process";
+
+const exec = promisify(child.exec);
 
 export const action: ActionFunction = async ({ request }) => {
   if (request.method !== "POST") {
@@ -27,7 +30,7 @@ export const action: ActionFunction = async ({ request }) => {
   if (event === "push") {
     response.branch = payload.ref.replace("refs/heads/", "");
     response.pusher = payload.pusher.name;
-    const { stdout } = await execa("ls");
+    const { stdout } = await exec("ls");
     response.dir = stdout;
   }
   return json(response, 200);
