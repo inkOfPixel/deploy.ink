@@ -30,7 +30,9 @@ export const action: ActionFunction = async ({ request }) => {
   if (event === "push") {
     response.branch = payload.ref.replace("refs/heads/", "");
     response.pusher = payload.pusher.name;
-    const { stdout } = await exec("ls");
+    const { stdout } = await exec(
+      `docker ps --format '{"id":"{{ .ID }}", "image": "{{ .Image }}", "name":"{{ .Names }}"}'`
+    );
     response.dir = stdout;
   }
   return json(response, 200);
