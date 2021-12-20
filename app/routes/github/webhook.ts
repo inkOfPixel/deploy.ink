@@ -1,9 +1,6 @@
 import { ActionFunction, json } from "remix";
 import crypto from "crypto";
-import { promisify } from "util";
-import child from "child_process";
-
-const exec = promisify(child.exec);
+import { listDeployments } from "~/utils/deploy.server";
 
 export const action: ActionFunction = async ({ request }) => {
   if (request.method !== "POST") {
@@ -27,13 +24,12 @@ export const action: ActionFunction = async ({ request }) => {
     message: `Webhook received: ${event}`,
     event,
   };
+
   if (event === "push") {
     response.branch = payload.ref.replace("refs/heads/", "");
     response.pusher = payload.pusher.name;
-    const { stdout } = await exec(
-      `docker ps --format '{"id":"{{ .ID }}", "image": "{{ .Image }}", "name":"{{ .Names }}"}'`
-    );
-    response.dir = stdout;
+    const deployments = await listDeployments();
+    response.dir = deployments;
   }
   return json(response, 200);
 };
