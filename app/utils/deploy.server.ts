@@ -10,11 +10,8 @@ export async function checkIfBranchDeploymentFolderExists(branch: string) {
 }
 
 export async function listDeployments() {
-  const { stdout, stderr } = await exec(`ls ~/deployments`);
-  console.log(stdout);
-  console.log("------");
-  console.log(stderr);
-  return stdout.split(" ");
+  const { stdout } = await exec(`ls ~/deployments`);
+  return stdout.trim().length > 0 ? stdout.split(" ") : [];
 }
 
 export async function createDeployment(branch: string, repoUrl: string) {
@@ -22,8 +19,13 @@ export async function createDeployment(branch: string, repoUrl: string) {
     mkdir ~/deployments/${branch};
     cd ~/deployments/${branch};
     git clone ${repoUrl} .;
-    docker compose up -d;
   `);
+  // await exec(`
+  //   mkdir ~/deployments/${branch};
+  //   cd ~/deployments/${branch};
+  //   git clone ${repoUrl} .;
+  //   docker compose up -d;
+  // `);
 }
 
 export async function redeploy(branch: string) {

@@ -22,10 +22,14 @@ export interface CreateAddJobArgs<Payload = any> {
 
 export function createAddJob<Payload = any>(args: CreateAddJobArgs<Payload>) {
   return async (payload: Payload) => {
-    const queue = new Queue(args.queueName, { connection });
+    const queue = getQueue(args.queueName);
     const jobName =
       typeof args.jobName === "function" ? args.jobName(payload) : args.jobName;
     const result = await queue.add(jobName, payload);
     return result;
   };
+}
+
+export function getQueue(queueName: string) {
+  return new Queue(queueName, { connection });
 }

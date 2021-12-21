@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { ActionFunction, json } from "remix";
+import { addPushJob } from "~/jobs/push_job.server";
 
 export const action: ActionFunction = async ({ request }) => {
   if (request.method !== "POST") {
@@ -25,8 +26,13 @@ export const action: ActionFunction = async ({ request }) => {
   };
 
   if (event === "push") {
-    response.branch = payload.ref.replace("refs/heads/", "");
+    const branch = payload.ref.replace("refs/heads/", "");
+    response.branch = branch;
     response.pusher = payload.pusher.name;
+    await addPushJob({
+      branch,
+      cloneUrl: payload.repository.clone_url,
+    });
   }
   return json(response, 200);
 };

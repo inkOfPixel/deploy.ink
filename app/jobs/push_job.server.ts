@@ -1,24 +1,35 @@
-import { listDeployments } from "~/utils/deploy.server";
+import { createDeployment, listDeployments } from "~/utils/deploy.server";
 import { createAddJob, createWorker } from "~/utils/jobs.server";
 
 const queueName = "push";
 
-export interface JobPayload {
+export interface PushJobPayload {
   branch: string;
+  cloneUrl: string;
 }
 
-export const pushWorker = createWorker<JobPayload>(queueName, async (job) => {
-  console.log(`Deploying ${job.data.branch}`);
-  try {
-    const deployments = await listDeployments();
-    console.log(deployments);
-  } catch (error) {
-    console.error("ERROR", error);
+export const pushWorker = createWorker<PushJobPayload>(
+  queueName,
+  async (job) => {
+    const branch = job.data.branch;
+    console.log(`Deploying ${branch}`);
+    const cloneUrl = job.data.cloneUrl;
+    try {
+      const deployments = await listDeployments();
+      if (deployments.includes(branch)) {
+        // redeploy
+      } else {
+        // create
+        console.log("Creating deployment...");
+        const result = await createDeployment(branch, cloneUrl);
+      }
+    } catch (error) {
+      console.error("ERROR", error);
+    }
   }
-  console.log(job.name, job.data);
-});
+);
 
-export const addPushJob = createAddJob({
+export const addPushJob = createAddJob<PushJobPayload>({
   queueName,
   jobName: (payload) => `Deploy branch ${payload.branch}`,
 });
