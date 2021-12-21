@@ -26,7 +26,7 @@ export async function createDeployment({
   cloneUrl,
   baseFolder = "",
 }: CreateDeploymentOptions) {
-  const port = getPort();
+  const port = await getPort();
   console.log("!! Got port", port);
   const strippedFolder = baseFolder.replace(/\/$/g, "").replace(/^\//g, "");
   await exec(`
