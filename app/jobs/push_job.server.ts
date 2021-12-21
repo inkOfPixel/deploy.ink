@@ -14,17 +14,13 @@ export const pushWorker = createWorker<PushJobPayload>(
     const branch = job.data.branch;
     console.log(`Deploying ${branch}`);
     const cloneUrl = job.data.cloneUrl;
-    try {
-      const deployments = await listDeployments();
-      if (deployments.includes(branch)) {
-        // redeploy
-      } else {
-        // create
-        console.log("Creating deployment...");
-        const result = await createDeployment(branch, cloneUrl);
-      }
-    } catch (error) {
-      console.error("ERROR", error);
+    const deployments = await listDeployments();
+    if (deployments.includes(branch)) {
+      // redeploy
+    } else {
+      // create
+      console.log("Creating deployment...");
+      const result = await createDeployment(branch, cloneUrl);
     }
   }
 );

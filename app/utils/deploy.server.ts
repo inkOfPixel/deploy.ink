@@ -1,4 +1,5 @@
 import child from "child_process";
+import getPort from "get-port";
 import { promisify } from "util";
 
 const exec = promisify(child.exec);
@@ -14,18 +15,28 @@ export async function listDeployments() {
   return stdout.trim().length > 0 ? stdout.split(" ") : [];
 }
 
-export async function createDeployment(branch: string, repoUrl: string) {
+export interface CreateDeploymentOptions {
+  branch: string;
+  cloneUrl: string;
+  baseFolder?: string;
+}
+
+export async function createDeployment({
+  branch,
+  cloneUrl,
+  baseFolder = "",
+}: CreateDeploymentOptions) {
+  const port = getPort();
+  console.log("!! Got port", port);
+  const strippedFolder = baseFolder.replace(/\/$/g, "").replace(/^\//g, "");
   await exec(`
     mkdir ~/deployments/${branch};
     cd ~/deployments/${branch};
-    git clone ${repoUrl} .;
+    git clone ${cloneUrl} .;
+    ${strippedFolder.length > 0 ? `cd ${strippedFolder};` : ""};
+    echo "HOST_PORT=${port}" >> .env;
+    docker compose up -d;
   `);
-  // await exec(`
-  //   mkdir ~/deployments/${branch};
-  //   cd ~/deployments/${branch};
-  //   git clone ${repoUrl} .;
-  //   docker compose up -d;
-  // `);
 }
 
 export async function redeploy(branch: string) {
