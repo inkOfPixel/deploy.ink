@@ -1,6 +1,5 @@
-import { ActionFunction, json } from "remix";
 import crypto from "crypto";
-import { listDeployments } from "~/utils/deploy.server";
+import { ActionFunction, json } from "remix";
 
 export const action: ActionFunction = async ({ request }) => {
   if (request.method !== "POST") {
@@ -28,8 +27,6 @@ export const action: ActionFunction = async ({ request }) => {
   if (event === "push") {
     response.branch = payload.ref.replace("refs/heads/", "");
     response.pusher = payload.pusher.name;
-    const deployments = await listDeployments();
-    response.dir = deployments;
   }
   return json(response, 200);
 };

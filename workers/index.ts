@@ -1,9 +1,3 @@
-import { WorkerOptions } from "bullmq";
-import { startPushWorker } from "./push_worker";
-import { connection } from "@config/jobs";
+import { pushWorker } from "../app/jobs/push_job.server";
 
-const options: WorkerOptions = {
-  connection,
-};
-
-startPushWorker(options);
+pushWorker();

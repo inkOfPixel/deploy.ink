@@ -10,7 +10,10 @@ export async function checkIfBranchDeploymentFolderExists(branch: string) {
 }
 
 export async function listDeployments() {
-  const { stdout } = await exec(`ls ~/deployments`);
+  const { stdout, stderr } = await exec(`ls ~/deployments`);
+  console.log(stdout);
+  console.log("------");
+  console.log(stderr);
   return stdout.split(" ");
 }
 

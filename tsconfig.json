@@ -11,8 +11,7 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./app/*"],
-      "@config/*": ["./config/*"]
+      "~/*": ["./app/*"]
     },
 
     // Remix takes care of building everything in `remix build`.

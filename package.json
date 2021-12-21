@@ -6,13 +6,14 @@
   "scripts": {
     "build": "npm run build:css && remix build",
     "build:css": "tailwindcss -o ./app/styles.css",
-    "dev": "concurrently \"npm run dev:css\" \"remix dev\"",
-    "dev:css": "tailwindcss -o ./app/styles.css --watch",
-    "dev:worker": "ts-node-dev --respawn --transpile-only --clear workers/index.ts",
+    "dev": "concurrently -p \"[{name}]\" -n \"remix,workers,tailwind\" -c \"blue.bold,magenta.bold,green.bold\" \"npm:dev:remix\" \"npm:dev:workers\" \"npm:dev:tailwind\"",
+    "dev:remix": "remix dev",
+    "dev:tailwind": "tailwindcss -o ./app/styles.css --watch",
+    "dev:workers": "ts-node-dev --respawn --transpile-only -r tsconfig-paths/register workers/index.ts",
     "postinstall": "remix setup node",
-    "start": "npm run start:remix & npm run start:worker",
+    "start": "npm run start:remix & npm run start:workers",
     "start:remix": "remix-serve build",
-    "start:worker": "cross-env NODE_ENV=production ts-node --transpile-only workers/index.ts",
+    "start:workers": "cross-env NODE_ENV=production ts-node --transpile-only -r tsconfig-paths/register workers/index.ts",
     "deploy": "./deploy.sh"
   },
   "dependencies": {
@@ -32,6 +33,7 @@
     "tailwindcss": "3.0.2",
     "ts-node": "10.4.0",
     "ts-node-dev": "1.1.8",
+    "tsconfig-paths": "3.12.0",
     "typescript": "4.1.2"
   },
   "engines": {
