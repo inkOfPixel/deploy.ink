@@ -36,6 +36,7 @@ export async function createDeployment({
     ${strippedFolder.length > 0 ? `cd ${strippedFolder};` : ""};
     echo "HOST_PORT=${port}" >> .env;
     docker compose up -d;
+    curl localhost:2019/config/apps/http/servers/dashboard/routes -X POST -H "Content-Type: application/json" -d '{ "handle": [ { "handler": "reverse_proxy", "transport": { "protocol": "http" }, "upstreams": [ { "dial": "localhost:${port}" } ] } ], "match": [ { "host": [ "${branch}.deploy.ink" ] } ] }'
   `);
 }
 
