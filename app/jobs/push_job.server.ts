@@ -20,7 +20,7 @@ export const pushWorker = createWorker<PushJobPayload>(
     } else {
       // create
       console.log("Creating deployment...");
-      const result = await createDeployment(branch, cloneUrl);
+      const result = await createDeployment({ branch, cloneUrl });
     }
   }
 );
