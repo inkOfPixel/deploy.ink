@@ -45,13 +45,15 @@ export interface RedeployOptions {
 
 export async function redeploy({ branch, baseFolder = "" }: RedeployOptions) {
   const normalizedFolder = normalizeFolderName(baseFolder);
-  await exec(`
+  const { stdout } = await exec(`
     cd ~/deployments/${branch};
     git pull;
     ${normalizedFolder.length > 0 ? `cd ${normalizedFolder};` : ""}
     docker compose build;
     docker compose up --no-deps -d;
   `);
+  console.log("REDEPLOY RES:");
+  console.log(stdout);
 }
 
 function normalizeFolderName(folder: string) {
