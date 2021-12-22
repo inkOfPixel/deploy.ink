@@ -11,7 +11,6 @@ export async function listDeployments() {
     .split(" ")
     .map((f) => f.trim())
     .filter((f) => f.length > 0);
-  console.log("RES", folders);
   return folders;
 }
 
