@@ -52,7 +52,7 @@ export async function redeploy({ branch, baseFolder = "" }: RedeployOptions) {
     echo "changes pulled";
     ${normalizedFolder.length > 0 ? `cd ${normalizedFolder};` : ""}
     echo "Build new image";
-    docker compose build;
+    docker compose build --no-cache;
     echo "Restart containers";
     docker compose up --no-deps -d;
   `);
