@@ -17,11 +17,14 @@ export const pushWorker = createWorker<PushJobPayload>(
     const deployments = await listDeployments();
     if (deployments.includes(branch)) {
       // redeploy
-    } else {
-      // create
-      console.log("Creating deployment...");
-      const result = await createDeployment({ branch, cloneUrl });
+      return `Redeployed branch "${branch}" [${deployments.join(", ")}]`;
     }
+    // create
+    console.log("Creating deployment...");
+    // await createDeployment({ branch, cloneUrl });
+    return `New deployment created for branch "${branch}" [${deployments.join(
+      ", "
+    )}]`;
   }
 );
 

@@ -12,6 +12,7 @@ interface Job {
   failedReason: string;
   processedOn: string;
   finishedOn: string;
+  returnValue: any;
 }
 
 interface LoaderData {
@@ -41,6 +42,7 @@ export let loader: LoaderFunction = async (): Promise<LoaderData> => {
         finishedOn: job.finishedOn
           ? new Date(job.finishedOn).toISOString()
           : "",
+        returnValue: job.returnvalue,
       };
     })
   );
@@ -103,7 +105,7 @@ export default function Jobs() {
                       scope="col"
                       className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
-                      Failed reason
+                      Result
                     </th>
                     <th scope="col" className="relative px-6 py-3">
                       <span className="sr-only">Edit</span>
@@ -164,7 +166,9 @@ export default function Jobs() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
-                        {job.failedReason}
+                        {job.status === "completed"
+                          ? job.returnValue
+                          : job.failedReason}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <a
