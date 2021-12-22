@@ -27,26 +27,36 @@ export async function createDeployment({
   baseFolder = "",
 }: CreateDeploymentOptions) {
   const port = await getPort();
-  console.log("!! Got port", port);
-  const strippedFolder = baseFolder.replace(/\/$/g, "").replace(/^\//g, "");
+  const normalizedFolder = normalizeFolderName(baseFolder);
   await exec(`
     mkdir ~/deployments/${branch};
     cd ~/deployments/${branch};
     git clone ${cloneUrl} .;
-    ${strippedFolder.length > 0 ? `cd ${strippedFolder};` : ""}
+    ${normalizedFolder.length > 0 ? `cd ${normalizedFolder};` : ""}
     echo "HOST_PORT=${port}" >> .env;
     docker compose up -d;
     curl localhost:2019/config/apps/http/servers/dashboard/routes -X POST -H "Content-Type: application/json" -d '{ "handle": [ { "handler": "reverse_proxy", "transport": { "protocol": "http" }, "upstreams": [ { "dial": "localhost:${port}" } ] } ], "match": [ { "host": [ "${branch}.deploy.ink" ] } ] }'
   `);
 }
 
-export async function redeploy(branch: string) {
+export interface RedeployOptions {
+  branch: string;
+  baseFolder?: string;
+}
+
+export async function redeploy({ branch, baseFolder = "" }: RedeployOptions) {
+  const normalizedFolder = normalizeFolderName(baseFolder);
   await exec(`
     cd ~/deployments/${branch};
-    docker compose down;
-    docker compose build strapi-${branch};
-    docker compose up --no-deps -d strapi-${branch};
+    git pull;
+    ${normalizedFolder.length > 0 ? `cd ${normalizedFolder};` : ""}
+    docker compose build;
+    docker compose up --no-deps -d;
   `);
+}
+
+function normalizeFolderName(folder: string) {
+  return folder.replace(/\/$/g, "").replace(/^\//g, "");
 }
 
 function listActiveContainers() {
