@@ -5,7 +5,7 @@ import { promisify } from "util";
 const exec = promisify(child.exec);
 
 export async function listDeployments() {
-  const { stdout } = await exec(`ls app`);
+  const { stdout } = await exec(`ls ~/deployments`);
   const dedupedWhitespaceOutput = stdout.replace(/(\s+)/g, " ");
   const folders = dedupedWhitespaceOutput
     .split(" ")
