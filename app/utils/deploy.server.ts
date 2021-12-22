@@ -47,9 +47,13 @@ export async function redeploy({ branch, baseFolder = "" }: RedeployOptions) {
   const normalizedFolder = normalizeFolderName(baseFolder);
   const { stdout } = await exec(`
     cd ~/deployments/${branch};
+    echo "pulling latest changes..";
     git pull;
+    echo "changes pulled";
     ${normalizedFolder.length > 0 ? `cd ${normalizedFolder};` : ""}
+    echo "Build new image";
     docker compose build;
+    echo "Restart containers";
     docker compose up --no-deps -d;
   `);
   console.log("REDEPLOY RES:");
