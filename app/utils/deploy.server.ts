@@ -4,15 +4,15 @@ import { promisify } from "util";
 
 const exec = promisify(child.exec);
 
-export async function checkIfBranchDeploymentFolderExists(branch: string) {
-  const { stdout } = await exec(`ls ~/deployments`);
-  const deployments = stdout.split(" ");
-  return deployments.includes(branch);
-}
-
 export async function listDeployments() {
-  const { stdout } = await exec(`ls ~/deployments`);
-  return stdout.trim().length > 0 ? stdout.split(" ") : [];
+  const { stdout } = await exec(`ls app`);
+  const dedupedWhitespaceOutput = stdout.replace(/(\s+)/g, " ");
+  const folders = dedupedWhitespaceOutput
+    .split(" ")
+    .map((f) => f.trim())
+    .filter((f) => f.length > 0);
+  console.log("RES", folders);
+  return folders;
 }
 
 export interface CreateDeploymentOptions {
