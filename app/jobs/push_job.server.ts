@@ -19,9 +19,11 @@ export const pushWorker = createWorker<PushJobPayload>(
     const cloneUrl = job.data.cloneUrl;
     const deployments = await listDeployments();
     if (deployments.includes(branch)) {
+      console.log(`Redeploying ${branch}`);
       await redeploy({ branch });
       return `Redeployed branch "${branch}"`;
     }
+    console.log(`Creating deployment for ${branch}`);
     await createDeployment({ branch, cloneUrl });
     return `New deployment created for branch "${branch}"`;
   }
