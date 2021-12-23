@@ -54,9 +54,10 @@ export async function redeploy(params: DeploymentParams, job: Job) {
 function pullLatestChanges(params: DeploymentParams, job: Job) {
   return new Promise((resolve, reject) => {
     const repoPath = getRepoPath(params);
-    console.log("Before spawning, process.env is", process.env);
+    console.log("Before spawning, process.env.PATH is\n", process.env.PATH);
     const command = child.spawn("git", ["pull"], {
       cwd: repoPath,
+      env: process.env,
     });
     command.stdout.on("data", (data) => {
       let progress = getDeploymentProgress(job);
