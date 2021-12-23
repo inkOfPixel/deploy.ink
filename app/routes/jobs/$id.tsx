@@ -10,6 +10,7 @@ import {
   DeploymentJobProgress,
   getDeploymentProgress,
 } from "~/utils/deploy.server";
+import { useRevalidateOnInterval } from "~/hooks/useRevalidateOnInterval";
 
 dayjs.extend(calendar);
 
@@ -59,6 +60,8 @@ export default function Job() {
   const timestamp = dayjs(job.timestamp);
   const processedOn = dayjs(job.processedOn);
   const finishedOn = dayjs(job.finishedOn);
+
+  useRevalidateOnInterval();
   return (
     <div className="p-10">
       <div className="flex items-center">
@@ -86,7 +89,7 @@ export default function Job() {
           <div className="px-4 py-5 sm:px-6">
             <span className="text-xl font-medium">Logs</span>
           </div>
-          <div className="px-4 py-5 sm:p-6">
+          <div className="px-4 py-5 sm:p-6 h-96 overflow-scroll">
             {job.progress.lines.map((line, index) => (
               <pre key={index} className="whitespace-pre-wrap">
                 {line}

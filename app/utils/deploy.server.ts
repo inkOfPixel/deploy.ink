@@ -46,29 +46,28 @@ export async function createDeployment({
 }
 
 export async function redeploy(params: DeploymentParams, job: Job) {
+  await appendLineToDeploymentProgress(job, "Pulling latest changes...");
   await pullLatestChanges(params, job);
+  await appendLineToDeploymentProgress(job, "\n\nBuilding new image...");
   await buildNewImage(params, job);
+  await appendLineToDeploymentProgress(job, "\n\nRestarting containers...");
   await restartContainers(params, job);
 }
 
 function pullLatestChanges(params: DeploymentParams, job: Job) {
   return new Promise((resolve, reject) => {
     const repoPath = getRepoPath(params);
-    console.log("Before spawning, process.env.PATH is\n", process.env.PATH);
     const command = child.spawn("git", ["pull"], {
       cwd: repoPath,
-      env: process.env,
     });
     command.stdout.on("data", (data) => {
-      let progress = getDeploymentProgress(job);
-      progress.lines.push(data.toString());
-      job.updateProgress(progress);
+      appendLineToDeploymentProgress(job, data.toString()).catch(reject);
     });
 
     command.stderr.on("data", (data) => {
-      let progress = getDeploymentProgress(job);
-      progress.lines.push("err: " + data.toString());
-      job.updateProgress(progress);
+      appendLineToDeploymentProgress(job, "err: " + data.toString()).catch(
+        reject
+      );
     });
 
     command.on("close", (code) => {
@@ -92,15 +91,13 @@ function buildNewImage(params: DeploymentParams, job: Job) {
       cwd: deployPath,
     });
     command.stdout.on("data", (data) => {
-      let progress = getDeploymentProgress(job);
-      progress.lines.push(data.toString());
-      job.updateProgress(progress);
+      appendLineToDeploymentProgress(job, data.toString()).catch(reject);
     });
 
     command.stderr.on("data", (data) => {
-      let progress = getDeploymentProgress(job);
-      progress.lines.push("err: " + data.toString());
-      job.updateProgress(progress);
+      appendLineToDeploymentProgress(job, "err: " + data.toString()).catch(
+        reject
+      );
     });
 
     command.on("close", (code) => {
@@ -127,15 +124,13 @@ function restartContainers(params: DeploymentParams, job: Job) {
       }
     );
     command.stdout.on("data", (data) => {
-      let progress = getDeploymentProgress(job);
-      progress.lines.push(data.toString());
-      job.updateProgress(progress);
+      appendLineToDeploymentProgress(job, data.toString()).catch(reject);
     });
 
     command.stderr.on("data", (data) => {
-      let progress = getDeploymentProgress(job);
-      progress.lines.push("err: " + data.toString());
-      job.updateProgress(progress);
+      appendLineToDeploymentProgress(job, "err: " + data.toString()).catch(
+        reject
+      );
     });
 
     command.on("close", (code) => {
@@ -168,6 +163,12 @@ function getRepoPath(params: DeploymentParams) {
 
 function getRelativePath(path: string) {
   return path.replace(/\/$/g, "").replace(/^\//g, "");
+}
+
+function appendLineToDeploymentProgress(job: Job, line: string) {
+  const progress = getDeploymentProgress(job);
+  progress.lines.push(line);
+  return job.updateProgress(progress);
 }
 
 export function getDeploymentProgress(job: Job): DeploymentJobProgress {
