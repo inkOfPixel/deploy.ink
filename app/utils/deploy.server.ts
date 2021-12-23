@@ -54,6 +54,7 @@ export async function redeploy(params: DeploymentParams, job: Job) {
 function pullLatestChanges(params: DeploymentParams, job: Job) {
   return new Promise((resolve, reject) => {
     const repoPath = getRepoPath(params);
+    console.log("Before spawning, process.env is", process.env);
     const command = child.spawn("git", ["pull"], {
       cwd: repoPath,
     });
@@ -75,6 +76,10 @@ function pullLatestChanges(params: DeploymentParams, job: Job) {
       } else {
         reject(`Failed to pull changes: Exit code ${code}`);
       }
+    });
+
+    command.on("error", (err) => {
+      reject(err);
     });
   });
 }
@@ -103,6 +108,10 @@ function buildNewImage(params: DeploymentParams, job: Job) {
       } else {
         reject(`Failed to pull changes: Exit code ${code}`);
       }
+    });
+
+    command.on("error", (err) => {
+      reject(err);
     });
   });
 }
@@ -134,6 +143,10 @@ function restartContainers(params: DeploymentParams, job: Job) {
       } else {
         reject(code);
       }
+    });
+
+    command.on("error", (err) => {
+      reject(err);
     });
   });
 }
