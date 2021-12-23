@@ -5,7 +5,7 @@ import { promisify } from "util";
 
 const exec = promisify(child.exec);
 
-const DEPLOYMENTS_DIRECTORY = "~/deployments";
+const DEPLOYMENTS_DIRECTORY = "/home/ubuntu/deployments";
 
 export interface DeploymentJobProgress {
   lines: string[];
