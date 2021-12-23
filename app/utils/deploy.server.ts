@@ -46,6 +46,8 @@ export interface RedeployOptions {
 export async function redeploy({ branch, baseFolder = "" }: RedeployOptions) {
   const normalizedFolder = normalizeFolderName(baseFolder);
   const { stdout } = await exec(`
+    echo "who am i???";
+    whoami
     cd ~/deployments/${branch};
     echo "pulling latest changes..";
     git pull;
