@@ -87,7 +87,7 @@ function pullLatestChanges(params: DeploymentParams, job: Job) {
 function buildNewImage(params: DeploymentParams, job: Job) {
   return new Promise((resolve, reject) => {
     const deployPath = getRepoDeployPath(params);
-    const command = child.spawn("docker", ["compose", "build"], {
+    const command = child.spawn("docker", ["compose", "build", "--no-cache"], {
       cwd: deployPath,
     });
     command.stdout.on("data", (data) => {
