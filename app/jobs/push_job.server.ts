@@ -28,7 +28,7 @@ export const pushWorker = createWorker<PushJobPayload>(
       await redeploy(params, job);
       return `Redeployed branch "${branch}"`;
     }
-    await createDeployment(params);
+    await createDeployment(params, job);
     return `New deployment created for branch "${branch}"`;
   }
 );

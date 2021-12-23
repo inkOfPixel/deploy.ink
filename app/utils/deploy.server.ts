@@ -27,22 +27,56 @@ export async function listDeployments() {
   return folders;
 }
 
-export async function createDeployment({
-  branch,
-  cloneUrl,
-  deployPath: baseFolder = "",
-}: DeploymentParams) {
+export async function createDeployment(params: DeploymentParams, job: Job) {
   const port = await getPort();
-  const normalizedFolder = getRelativePath(baseFolder);
-  await exec(`
-    mkdir ~/deployments/${branch};
-    cd ~/deployments/${branch};
-    git clone ${cloneUrl} .;
-    ${normalizedFolder.length > 0 ? `cd ${normalizedFolder};` : ""}
-    echo "HOST_PORT=${port}" >> .env;
-    docker compose up -d;
-    curl localhost:2019/config/apps/http/servers/dashboard/routes -X POST -H "Content-Type: application/json" -d '{ "handle": [ { "handler": "reverse_proxy", "transport": { "protocol": "http" }, "upstreams": [ { "dial": "localhost:${port}" } ] } ], "match": [ { "host": [ "${branch}.deploy.ink" ] } ] }'
-  `);
+  await appendLineToDeploymentProgress(job, "Clone repo..");
+  await cloneRepo(params, job);
+  await appendLineToDeploymentProgress(job, "Add port to env file..");
+  await addPortToEnvFile(port, params, job);
+  await appendLineToDeploymentProgress(job, "Start containers..");
+  await startContainers(params, job);
+  await appendLineToDeploymentProgress(job, "Add caddy route..");
+  await addCaddyRoute(port, params, job);
+}
+
+function cloneRepo(params: DeploymentParams, job: Job) {
+  return spawnCommand(job, "git", ["clone", params.cloneUrl, params.branch], {
+    cwd: DEPLOYMENTS_DIRECTORY,
+  });
+}
+
+function addPortToEnvFile(port: number, params: DeploymentParams, job: Job) {
+  const deployPath = getRepoDeployPath(params);
+  return spawnCommand(job, "echo", [`"HOST_PORT=${port}"`, ">>", ".env"], {
+    cwd: deployPath,
+  });
+}
+
+function startContainers(params: DeploymentParams, job: Job) {
+  const deployPath = getRepoDeployPath(params);
+  return spawnCommand(job, "docker", ["compose", "up", "-d"], {
+    cwd: deployPath,
+  });
+}
+
+function addCaddyRoute(port: number, params: DeploymentParams, job: Job) {
+  const deployPath = getRepoDeployPath(params);
+  return spawnCommand(
+    job,
+    "curl",
+    [
+      "localhost:2019/config/apps/http/servers/dashboard/routes",
+      "-X",
+      "POST",
+      "-H",
+      `"Content-Type: application/json"`,
+      "-d",
+      `'{ "handle": [ { "handler": "reverse_proxy", "transport": { "protocol": "http" }, "upstreams": [ { "dial": "localhost:${port}" } ] } ], "match": [ { "host": [ "${params.branch}.deploy.ink" ] } ] }'`,
+    ],
+    {
+      cwd: deployPath,
+    }
+  );
 }
 
 export async function redeploy(params: DeploymentParams, job: Job) {
@@ -55,85 +89,45 @@ export async function redeploy(params: DeploymentParams, job: Job) {
 }
 
 function pullLatestChanges(params: DeploymentParams, job: Job) {
-  return new Promise((resolve, reject) => {
-    const repoPath = getRepoPath(params);
-    const command = child.spawn("git", ["pull"], {
-      cwd: repoPath,
-    });
-    command.stdout.on("data", (data) => {
-      appendLineToDeploymentProgress(job, data.toString()).catch(reject);
-    });
-
-    command.stderr.on("data", (data) => {
-      appendLineToDeploymentProgress(job, "err: " + data.toString()).catch(
-        reject
-      );
-    });
-
-    command.on("close", (code) => {
-      if (code === 0) {
-        resolve(code);
-      } else {
-        reject(`Failed to pull changes: Exit code ${code}`);
-      }
-    });
-
-    command.on("error", (err) => {
-      reject(err);
-    });
+  const repoPath = getRepoPath(params);
+  return spawnCommand(job, "git", ["pull"], {
+    cwd: repoPath,
   });
 }
 
 function buildNewImage(params: DeploymentParams, job: Job) {
-  return new Promise((resolve, reject) => {
-    const deployPath = getRepoDeployPath(params);
-    const command = child.spawn("docker", ["compose", "build", "--no-cache"], {
-      cwd: deployPath,
-    });
-    command.stdout.on("data", (data) => {
-      appendLineToDeploymentProgress(job, data.toString()).catch(reject);
-    });
-
-    command.stderr.on("data", (data) => {
-      appendLineToDeploymentProgress(job, "err: " + data.toString()).catch(
-        reject
-      );
-    });
-
-    command.on("close", (code) => {
-      if (code === 0) {
-        resolve(code);
-      } else {
-        reject(`Failed to pull changes: Exit code ${code}`);
-      }
-    });
-
-    command.on("error", (err) => {
-      reject(err);
-    });
+  const deployPath = getRepoDeployPath(params);
+  return spawnCommand(job, "docker", ["compose", "build", "--no-cache"], {
+    cwd: deployPath,
   });
 }
 
 function restartContainers(params: DeploymentParams, job: Job) {
+  const deployPath = getRepoDeployPath(params);
+  return spawnCommand(job, "docker", ["compose", "up", "--no-deps", "-d"], {
+    cwd: deployPath,
+  });
+}
+
+function spawnCommand(
+  job: Job,
+  command: string,
+  args: string[],
+  options?: child.SpawnOptionsWithoutStdio
+) {
   return new Promise((resolve, reject) => {
-    const command = child.spawn(
-      "docker",
-      ["compose", "up", "--no-deps", "-d"],
-      {
-        cwd: getRepoDeployPath(params),
-      }
-    );
-    command.stdout.on("data", (data) => {
+    const commandProcess = child.spawn(command, args, options);
+    commandProcess.stdout.on("data", (data) => {
       appendLineToDeploymentProgress(job, data.toString()).catch(reject);
     });
 
-    command.stderr.on("data", (data) => {
+    commandProcess.stderr.on("data", (data) => {
       appendLineToDeploymentProgress(job, "err: " + data.toString()).catch(
         reject
       );
     });
 
-    command.on("close", (code) => {
+    commandProcess.on("close", (code) => {
       if (code === 0) {
         resolve(code);
       } else {
@@ -141,7 +135,7 @@ function restartContainers(params: DeploymentParams, job: Job) {
       }
     });
 
-    command.on("error", (err) => {
+    commandProcess.on("error", (err) => {
       reject(err);
     });
   });
