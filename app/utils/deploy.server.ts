@@ -1,8 +1,21 @@
+import { Job } from "bullmq";
 import child from "child_process";
 import getPort from "get-port";
 import { promisify } from "util";
 
 const exec = promisify(child.exec);
+
+const DEPLOYMENTS_DIRECTORY = "~/deployments";
+
+export interface DeploymentJobProgress {
+  lines: string[];
+}
+
+export interface DeploymentParams {
+  branch: string;
+  cloneUrl: string;
+  deployPath: string;
+}
 
 export async function listDeployments() {
   const { stdout } = await exec(`ls ~/deployments`);
@@ -14,19 +27,13 @@ export async function listDeployments() {
   return folders;
 }
 
-export interface CreateDeploymentOptions {
-  branch: string;
-  cloneUrl: string;
-  baseFolder?: string;
-}
-
 export async function createDeployment({
   branch,
   cloneUrl,
-  baseFolder = "",
-}: CreateDeploymentOptions) {
+  deployPath: baseFolder = "",
+}: DeploymentParams) {
   const port = await getPort();
-  const normalizedFolder = normalizeFolderName(baseFolder);
+  const normalizedFolder = getRelativePath(baseFolder);
   await exec(`
     mkdir ~/deployments/${branch};
     cd ~/deployments/${branch};
@@ -38,36 +45,129 @@ export async function createDeployment({
   `);
 }
 
-export interface RedeployOptions {
-  branch: string;
-  baseFolder?: string;
+export async function redeploy(params: DeploymentParams, job: Job) {
+  await pullLatestChanges(params, job);
+  await buildNewImage(params, job);
+  await restartContainers(params, job);
 }
 
-export async function redeploy({ branch, baseFolder = "" }: RedeployOptions) {
-  const normalizedFolder = normalizeFolderName(baseFolder);
-  const { stdout } = await exec(`
-    echo "who am i???";
-    whoami
-    cd ~/deployments/${branch};
-    echo "pulling latest changes..";
-    git pull;
-    echo "changes pulled";
-    ${normalizedFolder.length > 0 ? `cd ${normalizedFolder};` : ""}
-    echo "Build new image";
-    docker compose build --no-cache;
-    echo "Restart containers";
-    docker compose up --no-deps -d;
-  `);
-  console.log("REDEPLOY RES:");
-  console.log(stdout);
+function pullLatestChanges(params: DeploymentParams, job: Job) {
+  return new Promise((resolve, reject) => {
+    const repoPath = getRepoPath(params);
+    const command = child.spawn("git", ["pull"], {
+      cwd: repoPath,
+    });
+    command.stdout.on("data", (data) => {
+      let progress = getDeploymentProgress(job);
+      progress.lines.push(data.toString());
+      job.updateProgress(progress);
+    });
+
+    command.stderr.on("data", (data) => {
+      let progress = getDeploymentProgress(job);
+      progress.lines.push("err: " + data.toString());
+      job.updateProgress(progress);
+    });
+
+    command.on("close", (code) => {
+      if (code === 0) {
+        resolve(code);
+      } else {
+        reject(`Failed to pull changes: Exit code ${code}`);
+      }
+    });
+  });
 }
 
-function normalizeFolderName(folder: string) {
-  return folder.replace(/\/$/g, "").replace(/^\//g, "");
+function buildNewImage(params: DeploymentParams, job: Job) {
+  return new Promise((resolve, reject) => {
+    const deployPath = getRepoDeployPath(params);
+    const command = child.spawn("docker", ["compose", "build"], {
+      cwd: deployPath,
+    });
+    command.stdout.on("data", (data) => {
+      let progress = getDeploymentProgress(job);
+      progress.lines.push(data.toString());
+      job.updateProgress(progress);
+    });
+
+    command.stderr.on("data", (data) => {
+      let progress = getDeploymentProgress(job);
+      progress.lines.push("err: " + data.toString());
+      job.updateProgress(progress);
+    });
+
+    command.on("close", (code) => {
+      if (code === 0) {
+        resolve(code);
+      } else {
+        reject(`Failed to pull changes: Exit code ${code}`);
+      }
+    });
+  });
 }
 
-function listActiveContainers() {
-  return exec(
-    `docker ps --format '{"id":"{{ .ID }}", "image": "{{ .Image }}", "name":"{{ .Names }}"}'`
-  );
+function restartContainers(params: DeploymentParams, job: Job) {
+  return new Promise((resolve, reject) => {
+    const command = child.spawn(
+      "docker",
+      ["compose", "up", "--no-deps", "-d"],
+      {
+        cwd: getRepoDeployPath(params),
+      }
+    );
+    command.stdout.on("data", (data) => {
+      let progress = getDeploymentProgress(job);
+      progress.lines.push(data.toString());
+      job.updateProgress(progress);
+    });
+
+    command.stderr.on("data", (data) => {
+      let progress = getDeploymentProgress(job);
+      progress.lines.push("err: " + data.toString());
+      job.updateProgress(progress);
+    });
+
+    command.on("close", (code) => {
+      if (code === 0) {
+        resolve(code);
+      } else {
+        reject(code);
+      }
+    });
+  });
 }
+
+function getRepoDeployPath(params: DeploymentParams) {
+  const repoPath = getRepoPath(params);
+  const deployPath = getRelativePath(params.deployPath);
+  let cwd = repoPath;
+  if (deployPath.length > 0) {
+    cwd += `/${deployPath}`;
+  }
+  return cwd;
+}
+
+function getRepoPath(params: DeploymentParams) {
+  return `${DEPLOYMENTS_DIRECTORY}/${params.branch}`;
+}
+
+function getRelativePath(path: string) {
+  return path.replace(/\/$/g, "").replace(/^\//g, "");
+}
+
+export function getDeploymentProgress(job: Job): DeploymentJobProgress {
+  return isDeploymentJobProgress(job.progress) ? job.progress : { lines: [] };
+}
+
+function isDeploymentJobProgress(
+  progress: Job["progress"] | DeploymentJobProgress
+): progress is DeploymentJobProgress {
+  return progress != null && (progress as DeploymentJobProgress).lines != null;
+}
+
+// function listActiveContainers() {
+//   return exec(
+//     `docker ps --format '{"id":"{{ .ID }}", "image": "{{ .Image }}", "name":"{{ .Names }}"}'`
+//   );
+// }

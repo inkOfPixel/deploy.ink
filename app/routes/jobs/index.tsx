@@ -1,9 +1,10 @@
-import type { LoaderFunction } from "remix";
-import { useLoaderData } from "remix";
-import { getQueue } from "~/utils/jobs.server";
-import { classNames } from "~/utils/styles";
+import dayjs from "dayjs";
+import { Link, LoaderFunction, useLoaderData } from "remix";
+import { JobStatusBadge } from "~/components/JobStatusBadge";
+import { getHumanReadableDateTime } from "~/utils/date";
+import { getJobs, getQueue } from "~/utils/jobs.server";
 
-interface Job {
+interface JobData {
   id?: string;
   name: string;
   status: string;
@@ -16,18 +17,13 @@ interface Job {
 }
 
 interface LoaderData {
-  jobs: Job[];
+  jobs: JobData[];
 }
 
 export let loader: LoaderFunction = async (): Promise<LoaderData> => {
-  const queue = getQueue("push");
-  const rawJobs = await queue.getJobs(
-    ["completed", "failed", "delayed", "active", "wait", "paused", "repeat"],
-    0,
-    100
-  );
+  const rawJobs = await getJobs("push", 100);
   const jobs = await Promise.all(
-    rawJobs.map(async (job): Promise<Job> => {
+    rawJobs.map(async (job): Promise<JobData> => {
       const status = await job.getState();
       return {
         id: job.id,
@@ -87,13 +83,13 @@ export default function Jobs() {
                       scope="col"
                       className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
-                      ProcessedOn
+                      Processed On
                     </th>
                     <th
                       scope="col"
                       className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
-                      FinishedOn
+                      Finished On
                     </th>
                     <th
                       scope="col"
@@ -107,78 +103,11 @@ export default function Jobs() {
                     >
                       Result
                     </th>
-                    <th scope="col" className="relative px-6 py-3">
-                      <span className="sr-only">Edit</span>
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {data.jobs.map((job) => (
-                    <tr key={job.id}>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          <div className="text-sm font-medium text-gray-900">
-                            {job.name}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={classNames(
-                            "px-2 inline-flex text-xs leading-5 font-semibold rounded-full",
-                            job.status === "completed" &&
-                              "bg-green-100 text-green-800",
-                            job.status === "failed" &&
-                              "bg-red-100 text-red-800",
-                            job.status === "delayed" &&
-                              "bg-yellow-100 text-yellow-800",
-                            job.status === "active" &&
-                              "bg-blue-100 text-blue-800",
-                            job.status === "wait" &&
-                              "bg-orange-100 text-orange-800",
-                            job.status === "paused" &&
-                              "bg-purple-100 text-purple-800",
-                            job.status === "repeat" &&
-                              "bg-gray-100 text-gray-800"
-                          )}
-                        >
-                          {job.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {job.timestamp}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {job.processedOn}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {job.finishedOn}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {job.attempts}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {job.status === "completed"
-                          ? job.returnValue
-                          : job.failedReason}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <a
-                          href="#"
-                          className="text-indigo-600 hover:text-indigo-900"
-                        >
-                          Edit
-                        </a>
-                      </td>
-                    </tr>
+                    <JobRow key={job.id} job={job} />
                   ))}
                 </tbody>
               </table>
@@ -187,5 +116,59 @@ export default function Jobs() {
         </div>
       </div>
     </div>
+  );
+}
+
+interface JobRowProps {
+  job: JobData;
+}
+
+function JobRow({ job }: JobRowProps) {
+  const timestamp = dayjs(job.timestamp);
+  const processedOn = dayjs(job.processedOn);
+  const finishedOn = dayjs(job.finishedOn);
+  return (
+    <tr>
+      <td className="px-6 py-4 w-52">
+        <div className="flex items-center">
+          <div className="text-sm font-medium text-gray-900">
+            <Link
+              to={job.id || "#"}
+              className="text-indigo-600 hover:text-indigo-900"
+            >
+              {job.name}
+            </Link>
+          </div>
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <JobStatusBadge status={job.status} />
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-xs text-gray-500">
+          {getHumanReadableDateTime(timestamp)}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        {processedOn.isValid() && (
+          <div className="text-xs text-gray-500">
+            {getHumanReadableDateTime(processedOn)}
+          </div>
+        )}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        {finishedOn.isValid() && (
+          <div className="text-xs text-gray-500">
+            {getHumanReadableDateTime(finishedOn)}
+          </div>
+        )}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-gray-900">{job.attempts}</div>
+      </td>
+      <td className="px-6 py-4 text-sm text-gray-500">
+        {job.status === "completed" ? job.returnValue : job.failedReason}
+      </td>
+    </tr>
   );
 }

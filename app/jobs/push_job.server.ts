@@ -1,5 +1,6 @@
 import {
   createDeployment,
+  DeploymentParams,
   listDeployments,
   redeploy,
 } from "~/utils/deploy.server";
@@ -18,13 +19,16 @@ export const pushWorker = createWorker<PushJobPayload>(
     const branch = job.data.branch;
     const cloneUrl = job.data.cloneUrl;
     const deployments = await listDeployments();
+    const params: DeploymentParams = {
+      branch,
+      cloneUrl,
+      deployPath: "",
+    };
     if (deployments.includes(branch)) {
-      console.log(`Redeploying ${branch}`);
-      await redeploy({ branch });
+      await redeploy(params, job);
       return `Redeployed branch "${branch}"`;
     }
-    console.log(`Creating deployment for ${branch}`);
-    await createDeployment({ branch, cloneUrl });
+    await createDeployment(params);
     return `New deployment created for branch "${branch}"`;
   }
 );

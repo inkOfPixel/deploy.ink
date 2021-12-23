@@ -33,3 +33,27 @@ export function createAddJob<Payload = any>(args: CreateAddJobArgs<Payload>) {
 export function getQueue(queueName: string) {
   return new Queue(queueName, { connection });
 }
+
+export async function getJobs(queueName: string, size: number): Promise<Job[]> {
+  const queue = getQueue(queueName);
+  const jobs = await queue.getJobs(
+    ["active", "completed", "failed", "delayed", "wait", "paused", "repeat"],
+    0,
+    size
+  );
+  jobs.sort(recentFirst);
+  return jobs;
+}
+
+function recentFirst(a: Job, b: Job) {
+  return b.timestamp - a.timestamp;
+}
+
+export async function getJob(queueName: string, id: string): Promise<Job> {
+  const queue = getQueue(queueName);
+  const job = await queue.getJob(id);
+  if (job == null) {
+    throw new Response("Not Found", { status: 404 });
+  }
+  return job;
+}
