@@ -1,8 +1,11 @@
 import dayjs from "dayjs";
 import { Link, LoaderFunction, useLoaderData } from "remix";
 import { JobStatusBadge } from "~/components/JobStatusBadge";
-import { getHumanReadableDateTime } from "~/utils/date";
-import { getJobs, getQueue } from "~/utils/jobs.server";
+import {
+  getHumanReadableDateTime,
+  getHumanReadableDuration,
+} from "~/utils/date";
+import { getJobs } from "~/utils/jobs.server";
 
 interface JobData {
   id?: string;
@@ -77,19 +80,13 @@ export default function Jobs() {
                       scope="col"
                       className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
-                      Timestamp
+                      Created
                     </th>
                     <th
                       scope="col"
                       className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
-                      Processed On
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Finished On
+                      Duration
                     </th>
                     <th
                       scope="col"
@@ -127,6 +124,8 @@ function JobRow({ job }: JobRowProps) {
   const timestamp = dayjs(job.timestamp);
   const processedOn = dayjs(job.processedOn);
   const finishedOn = dayjs(job.finishedOn);
+  let duration = getHumanReadableDuration(processedOn, finishedOn);
+  console.log("duration", duration);
   return (
     <tr>
       <td className="px-6 py-4 w-52">
@@ -150,18 +149,7 @@ function JobRow({ job }: JobRowProps) {
         </div>
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
-        {processedOn.isValid() && (
-          <div className="text-xs text-gray-500">
-            {getHumanReadableDateTime(processedOn)}
-          </div>
-        )}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        {finishedOn.isValid() && (
-          <div className="text-xs text-gray-500">
-            {getHumanReadableDateTime(finishedOn)}
-          </div>
-        )}
+        <div className="text-xs text-gray-500">{duration}</div>
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="text-sm text-gray-900">{job.attempts}</div>

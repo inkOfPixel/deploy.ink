@@ -89,7 +89,7 @@ export default function Job() {
           <div className="px-4 py-5 sm:px-6">
             <span className="text-xl font-medium">Logs</span>
           </div>
-          <div className="px-4 py-5 sm:p-6 h-96 overflow-scroll">
+          <div className="px-4 py-5 sm:p-6">
             {job.progress.lines.map((line, index) => (
               <pre key={index} className="whitespace-pre-wrap">
                 {line}
