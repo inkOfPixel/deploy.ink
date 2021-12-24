@@ -1,16 +1,15 @@
 import dayjs from "dayjs";
 import calendar from "dayjs/plugin/calendar";
-import type { LoaderFunction } from "remix";
-import { useLoaderData } from "remix";
+import { LoaderFunction } from "remix";
 import invariant from "tiny-invariant";
 import { JobStatusBadge } from "~/components/JobStatusBadge";
+import { useSWRData } from "~/hooks/useSWRData";
 import { getHumanReadableDateTime } from "~/utils/date";
-import { getJob } from "~/utils/jobs.server";
 import {
   DeploymentJobProgress,
   getDeploymentProgress,
 } from "~/utils/deploy.server";
-import { useRevalidateOnInterval } from "~/hooks/useRevalidateOnInterval";
+import { getJob } from "~/utils/jobs.server";
 
 dayjs.extend(calendar);
 
@@ -56,17 +55,17 @@ export let loader: LoaderFunction = async ({ params }): Promise<LoaderData> => {
 };
 
 export default function Job() {
-  let { job } = useLoaderData<LoaderData>();
+  let { job } = useSWRData<LoaderData>();
   const timestamp = dayjs(job.timestamp);
   const processedOn = dayjs(job.processedOn);
   const finishedOn = dayjs(job.finishedOn);
 
-  useRevalidateOnInterval();
   return (
     <div className="p-10">
       <div className="flex items-center">
         <h1 className="text-4xl font-extrabold text-gray-200 tracking-tight ">
-          {job.name}
+          {" "}
+          {job.name}{" "}
         </h1>
         <span className="ml-4 text-2xl text-gray-500">#{job.id}</span>
         <JobStatusBadge status={job.status} className="ml-4 text-base py-1" />
@@ -89,7 +88,7 @@ export default function Job() {
           <div className="px-4 py-5 sm:px-6">
             <span className="text-xl font-medium">Logs</span>
           </div>
-          <div className="px-4 py-5 sm:p-6">
+          <div className="px-4 py-5 sm:p-6 min-h-[200px]">
             {job.progress.lines.map((line, index) => (
               <pre key={index} className="whitespace-pre-wrap">
                 {line}

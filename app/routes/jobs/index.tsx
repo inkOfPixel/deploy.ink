@@ -125,7 +125,6 @@ function JobRow({ job }: JobRowProps) {
   const processedOn = dayjs(job.processedOn);
   const finishedOn = dayjs(job.finishedOn);
   let duration = getHumanReadableDuration(processedOn, finishedOn);
-  console.log("duration", duration);
   return (
     <tr>
       <td className="px-6 py-4 w-52">
