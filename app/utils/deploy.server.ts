@@ -29,6 +29,8 @@ export async function listDeployments() {
 
 export async function createDeployment(params: DeploymentParams, job: Job) {
   const port = await getPort();
+  await appendLineToDeploymentProgress(job, "Prune docker system..");
+  await dockerSystemPrune(job);
   await appendLineToDeploymentProgress(job, "Clone repo..");
   await cloneRepo(params, job);
   await appendLineToDeploymentProgress(job, "Add port to env file..");
@@ -37,6 +39,17 @@ export async function createDeployment(params: DeploymentParams, job: Job) {
   await startContainers(params, job);
   await appendLineToDeploymentProgress(job, "Add caddy route..");
   await addCaddyRoute(port, params, job);
+}
+
+function dockerSystemPrune(job: Job) {
+  return spawnCommand(
+    job,
+    "docker",
+    ["system", "prune", "-a", "--volumes", "-f"],
+    {
+      cwd: DEPLOYMENTS_DIRECTORY,
+    }
+  );
 }
 
 function cloneRepo(params: DeploymentParams, job: Job) {
@@ -80,6 +93,8 @@ function addCaddyRoute(port: number, params: DeploymentParams, job: Job) {
 }
 
 export async function redeploy(params: DeploymentParams, job: Job) {
+  await appendLineToDeploymentProgress(job, "Prune docker system..");
+  await dockerSystemPrune(job);
   await appendLineToDeploymentProgress(job, "Pulling latest changes...");
   await pullLatestChanges(params, job);
   await appendLineToDeploymentProgress(job, "\n\nBuilding new image...");
