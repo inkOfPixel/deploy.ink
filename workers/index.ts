@@ -1,22 +1,21 @@
-import Redis from "ioredis";
-import { pushWorker } from "../app/jobs/push_job.server";
+import { PushJob } from "../app/jobs/push_job.server";
+import { connection } from "../config/jobs";
 
 checkRedisConnection().then(() => {
   console.log("redis is ready");
-  pushWorker();
+  PushJob.startWorker({ connection });
 });
 
 function checkRedisConnection() {
   return new Promise((resolve, reject) => {
-    const redis = new Redis();
     let isWaitingForRedisServer = false;
-    redis.on("error", () => {
+    connection.on("error", () => {
       if (!isWaitingForRedisServer) {
         isWaitingForRedisServer = true;
         console.log("waiting for redis server...");
       }
     });
-    redis.on("connect", () => {
+    connection.on("connect", () => {
       resolve(true);
     });
   });

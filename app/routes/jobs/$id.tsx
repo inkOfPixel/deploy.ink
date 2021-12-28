@@ -4,12 +4,12 @@ import { LoaderFunction } from "remix";
 import invariant from "tiny-invariant";
 import { JobStatusBadge } from "~/components/JobStatusBadge";
 import { useSWRData } from "~/hooks/useSWRData";
+import { PushJob } from "~/jobs/push_job.server";
 import { getHumanReadableDateTime } from "~/utils/date";
 import {
   DeploymentJobProgress,
   getDeploymentProgress,
 } from "~/utils/deploy.server";
-import { getJob } from "~/utils/jobs.server";
 
 dayjs.extend(calendar);
 
@@ -32,7 +32,10 @@ interface LoaderData {
 
 export let loader: LoaderFunction = async ({ params }): Promise<LoaderData> => {
   invariant(params.id, "Expected params.id");
-  const rawJob = await getJob("push", params.id);
+  const rawJob = await PushJob.find(params.id);
+  if (rawJob == null) {
+    throw new Response("Not Found", { status: 404 });
+  }
   let progress = getDeploymentProgress(rawJob);
   return {
     job: {

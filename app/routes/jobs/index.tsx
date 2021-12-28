@@ -1,11 +1,11 @@
 import dayjs from "dayjs";
 import { Link, LoaderFunction, useLoaderData } from "remix";
 import { JobStatusBadge } from "~/components/JobStatusBadge";
+import { PushJob } from "~/jobs/push_job.server";
 import {
   getHumanReadableDateTime,
   getHumanReadableDuration,
 } from "~/utils/date";
-import { getJobs } from "~/utils/jobs.server";
 
 interface JobData {
   id?: string;
@@ -24,7 +24,7 @@ interface LoaderData {
 }
 
 export let loader: LoaderFunction = async (): Promise<LoaderData> => {
-  const rawJobs = await getJobs("push", 100);
+  const rawJobs = await PushJob.findMany(100);
   const jobs = await Promise.all(
     rawJobs.map(async (job): Promise<JobData> => {
       const status = await job.getState();
