@@ -49,9 +49,10 @@ export class Shell {
         await this.spawnCommand(program);
         break;
       case "macro":
-        await Promise.all(
-          program.commands.map((subcommand) => this.spawn(subcommand))
-        );
+        for (let i = 0; i < program.commands.length; i++) {
+          const subcommand = program.commands[i];
+          await this.spawn(subcommand);
+        }
         break;
       case "log":
         await this.logger?.info(program.message);
