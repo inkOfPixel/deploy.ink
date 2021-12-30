@@ -1,5 +1,5 @@
 import getPort from "get-port";
-import { Command, Log, MacroCommand } from "~/lib/shell.server";
+import { SpawnCommand, Log, MacroCommand } from "~/lib/shell.server";
 
 const DEPLOYMENTS_DIRECTORY = "/home/ubuntu/deployments";
 
@@ -22,16 +22,16 @@ export async function createDeploymentMacro({
       log("Prune inactive deployments.."),
       dockerSystemPruneCommand(),
       log("\nClone repo.."),
-      cloneRepoCommand({ path: branchHandle, cloneUrl }),
+      cloneRepoCommand({ branch, path: branchHandle, cloneUrl }),
       log("\nAdd port to env file.."),
       addPortToEnvFileCommand({
-        branchPath: branchHandle,
+        branchHandle: branchHandle,
         port,
         rootDirectory,
       }),
       log("\nStart containers.."),
       dockerStartContainersCommand({
-        branchPath: branchHandle,
+        branchHandle: branchHandle,
         rootDirectory,
       }),
       log("\nAdd caddy route.."),
@@ -76,9 +76,9 @@ function log(message: string): Log {
   };
 }
 
-function dockerSystemPruneCommand(): Command {
+function dockerSystemPruneCommand(): SpawnCommand {
   return {
-    type: "command",
+    type: "spawn-command",
     command: "docker",
     args: ["system", "prune", "-a", "--volumes", "-f"],
     workingDirectory: DEPLOYMENTS_DIRECTORY,
@@ -86,36 +86,37 @@ function dockerSystemPruneCommand(): Command {
 }
 
 interface CloneRepoCommandParams {
+  branch: string;
   path: string;
   cloneUrl: string;
 }
 
-function cloneRepoCommand(params: CloneRepoCommandParams): Command {
+function cloneRepoCommand(params: CloneRepoCommandParams): SpawnCommand {
   return {
-    type: "command",
+    type: "spawn-command",
     command: "git",
-    args: ["clone", params.cloneUrl, params.path],
+    args: ["clone", "-b", params.branch, params.cloneUrl, params.path],
     workingDirectory: DEPLOYMENTS_DIRECTORY,
   };
 }
 
 interface AddPortToEnvFileCommandParams {
   port: number;
-  branchPath: string;
+  branchHandle: string;
   rootDirectory?: string;
 }
 
 function addPortToEnvFileCommand({
   port,
-  branchPath,
+  branchHandle,
   rootDirectory,
-}: AddPortToEnvFileCommandParams): Command {
+}: AddPortToEnvFileCommandParams): SpawnCommand {
   const workingDirectory = getRepoDeployPath({
-    rootDirectory: rootDirectory,
-    branchHandle: branchPath,
+    rootDirectory,
+    branchHandle,
   });
   return {
-    type: "command",
+    type: "spawn-command",
     command: "echo",
     args: [`"HOST_PORT=${port}"`, ">>", ".env"],
     workingDirectory,
@@ -123,20 +124,20 @@ function addPortToEnvFileCommand({
 }
 
 interface DockerStartContainersCommandParams {
-  branchPath: string;
+  branchHandle: string;
   rootDirectory?: string;
 }
 
 function dockerStartContainersCommand({
-  branchPath,
+  branchHandle,
   rootDirectory,
-}: DockerStartContainersCommandParams): Command {
+}: DockerStartContainersCommandParams): SpawnCommand {
   const workingDirectory = getRepoDeployPath({
     rootDirectory,
-    branchHandle: branchPath,
+    branchHandle,
   });
   return {
-    type: "command",
+    type: "spawn-command",
     command: "docker",
     args: ["compose", "up", "-d"],
     workingDirectory,
@@ -153,13 +154,13 @@ function addCaddyRouteCommand({
   port,
   branchHandle,
   rootDirectory,
-}: AddCaddyRouteCommandParams): Command {
+}: AddCaddyRouteCommandParams): SpawnCommand {
   const workingDirectory = getRepoDeployPath({
     rootDirectory,
-    branchHandle: branchHandle,
+    branchHandle,
   });
   return {
-    type: "command",
+    type: "spawn-command",
     command: "curl",
     args: [
       "localhost:2019/config/apps/http/servers/dashboard/routes",
@@ -180,10 +181,10 @@ interface PullLatestChangesCommandParams {
 
 function pullLatestChangesCommand({
   branchHandle,
-}: PullLatestChangesCommandParams): Command {
+}: PullLatestChangesCommandParams): SpawnCommand {
   const workingDirectory = getRepoPath(branchHandle);
   return {
-    type: "command",
+    type: "spawn-command",
     command: "git",
     args: ["pull"],
     workingDirectory,
@@ -198,13 +199,13 @@ interface BuildNewImageCommandParams {
 function buildNewImageCommand({
   branchHandle,
   rootDirectory,
-}: BuildNewImageCommandParams): Command {
+}: BuildNewImageCommandParams): SpawnCommand {
   const workingDirectory = getRepoDeployPath({
     branchHandle,
     rootDirectory,
   });
   return {
-    type: "command",
+    type: "spawn-command",
     command: "docker",
     args: ["compose", "build", "--no-cache"],
     workingDirectory,
@@ -219,13 +220,13 @@ interface restartContainersCommandParams {
 function restartContainersCommand({
   branchHandle,
   rootDirectory,
-}: restartContainersCommandParams): Command {
+}: restartContainersCommandParams): SpawnCommand {
   const workingDirectory = getRepoDeployPath({
     branchHandle,
     rootDirectory,
   });
   return {
-    type: "command",
+    type: "spawn-command",
     command: "docker",
     args: ["compose", "up", "--no-deps", "-d"],
     workingDirectory,

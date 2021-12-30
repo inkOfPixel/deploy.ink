@@ -35,11 +35,11 @@ export class DeployClient {
   public readonly deployments = {
     create: async (options: CreateDeploymentOptions): Promise<void> => {
       const createMacro = await createDeploymentMacro(options);
-      await this.shell.spawn(createMacro);
+      await this.shell.run(createMacro);
     },
     update: async (options: UpdateDeploymentOptions): Promise<void> => {
       const updateMacro = updateDeploymentMacro(options);
-      await this.shell.spawn(updateMacro);
+      await this.shell.run(updateMacro);
     },
     destroy: async (options: UpdateDeploymentOptions): Promise<void> => {
       // ..
@@ -47,32 +47,43 @@ export class DeployClient {
     },
     list: async (): Promise<string[]> => {
       try {
-        const { output } = await this.shell.execute("ls ~/deployments");
-        const dedupedWhitespaceOutput = output.replace(/(\s+)/g, " ");
-        const folders = dedupedWhitespaceOutput
-          .split(" ")
-          .map((f) => f.trim())
-          .filter((f) => f.length > 0);
-        return folders;
-      } catch (error) {
-        return [];
-      }
+        const result = await this.shell.run({
+          type: "command",
+          command: "ls ~/deployments",
+        });
+        if (result != null) {
+          const dedupedWhitespaceOutput = result.output.replace(/(\s+)/g, " ");
+          const folders = dedupedWhitespaceOutput
+            .split(" ")
+            .map((f) => f.trim())
+            .filter((f) => f.length > 0);
+          return folders;
+        }
+      } catch (error) {}
+      return [];
     },
   };
 
   public readonly system = {
     getFreeDiskSpace: async (): Promise<string> => {
-      const { output } = await this.shell.execute(
-        "df -Ph . | tail -1 | awk '{print $4}'"
-      );
-      return output;
+      const result = await this.shell.run({
+        type: "command",
+        command: "df -Ph . | tail -1 | awk '{print $4}'",
+      });
+      if (result == null) {
+        throw new Error("Failed to get free disk space");
+      }
+      return result.output;
     },
     getAvailableMemory: async (): Promise<string> => {
-      // free -h | gawk  '/Mem:/{print $2}'
-      const { output } = await this.shell.execute(
-        "free -h | awk '/Mem:/ {print $7}'"
-      );
-      return output;
+      const result = await this.shell.run({
+        type: "command",
+        command: "free -h | awk '/Mem:/ {print $7}'",
+      });
+      if (result == null) {
+        throw new Error("Failed to get available memory");
+      }
+      return result.output;
     },
   };
 }

@@ -1,11 +1,17 @@
 import child from "child_process";
 import { Logger } from "./logger";
 import { promisify } from "util";
+import { assertNever } from "~/helpers";
 
 const exec = promisify(child.exec);
 
 export interface Command {
   type: "command";
+  command: string;
+}
+
+export interface SpawnCommand {
+  type: "spawn-command";
   command: string;
   args: string[];
   workingDirectory?: string;
@@ -13,7 +19,7 @@ export interface Command {
 
 export interface MacroCommand {
   type: "macro";
-  commands: Array<Command | MacroCommand | Log>;
+  commands: Array<Command | SpawnCommand | MacroCommand | Log>;
 }
 
 export interface Log {
@@ -26,7 +32,7 @@ export interface ExecutionResult {
   error: string;
 }
 
-export type Program = Command | MacroCommand | Log;
+export type Program = Command | SpawnCommand | MacroCommand | Log;
 
 export class Shell {
   private logger?: Logger;
@@ -35,32 +41,36 @@ export class Shell {
     this.logger = logger;
   }
 
-  async execute(command: string): Promise<ExecutionResult> {
-    const { stdout, stderr } = await exec(command);
+  async run(program: Program): Promise<ExecutionResult | undefined> {
+    switch (program.type) {
+      case "command":
+        return this.execute(program);
+      case "spawn-command":
+        await this.spawnCommand(program);
+        return;
+      case "macro":
+        for (let i = 0; i < program.commands.length; i++) {
+          const subcommand = program.commands[i];
+          await this.run(subcommand);
+        }
+        return;
+      case "log":
+        await this.logger?.info(program.message);
+        return;
+      default:
+        return assertNever(program);
+    }
+  }
+
+  private async execute(command: Command): Promise<ExecutionResult> {
+    const { stdout, stderr } = await exec(command.command);
     return {
       output: stdout,
       error: stderr,
     };
   }
 
-  async spawn(program: Program): Promise<void> {
-    switch (program.type) {
-      case "command":
-        await this.spawnCommand(program);
-        break;
-      case "macro":
-        for (let i = 0; i < program.commands.length; i++) {
-          const subcommand = program.commands[i];
-          await this.spawn(subcommand);
-        }
-        break;
-      case "log":
-        await this.logger?.info(program.message);
-        break;
-    }
-  }
-
-  private spawnCommand(command: Command): Promise<void> {
+  private spawnCommand(command: SpawnCommand): Promise<void> {
     return new Promise((resolve, reject) => {
       const commandProcess = child.spawn(command.command, command.args, {
         cwd: command.workingDirectory,
