@@ -46,7 +46,7 @@ export class Shell {
   async spawn(program: Program): Promise<void> {
     switch (program.type) {
       case "command":
-        this.spawnCommand(program);
+        await this.spawnCommand(program);
         break;
       case "macro":
         await Promise.all(
@@ -54,7 +54,7 @@ export class Shell {
         );
         break;
       case "log":
-        this.logger?.info(program.message);
+        await this.logger?.info(program.message);
         break;
     }
   }
@@ -84,7 +84,7 @@ export class Shell {
   }
 
   private convertInfoToMessage(data: unknown): string {
-    let message = "! unknown log format";
+    let message = `! unknown log format: ${typeof data}`;
     if (typeof data === "string") {
       message = data;
     }
@@ -92,7 +92,7 @@ export class Shell {
   }
 
   private convertErrorToMessage(error: unknown): string {
-    let message = "! unknown error format";
+    let message = `! unknown error format: ${typeof error}`;
     if (typeof error === "string") {
       message = error;
     }
