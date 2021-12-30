@@ -1,4 +1,5 @@
-import type { MetaFunction } from "remix";
+import { LoaderFunction, MetaFunction, useLoaderData } from "remix";
+import { DeployClient } from "~/sdk/deployments";
 
 export let meta: MetaFunction = () => {
   return {
@@ -7,13 +8,30 @@ export let meta: MetaFunction = () => {
   };
 };
 
-const stats = [
-  { name: "Free disk space", stat: "71,897" },
-  { name: "Available memory", stat: "58.16%" },
-  { name: "Active containers", stat: "24.57%" },
-];
+interface Stat {
+  name: string;
+  stat: string;
+}
+
+interface LoaderData {
+  stats: Stat[];
+}
+
+export let loader: LoaderFunction = async (): Promise<LoaderData> => {
+  const client = new DeployClient();
+  const freeDiskSpace = await client.system.getFreeDiskSpace();
+  const deployments = await client.deployments.list();
+  return {
+    stats: [
+      { name: "Free Disk Space", stat: freeDiskSpace },
+      { name: "Available memory", stat: "589MB" },
+      { name: "Deployments count", stat: deployments.length.toString() },
+    ],
+  };
+};
 
 export default function Index() {
+  const { stats } = useLoaderData<LoaderData>();
   return (
     <>
       <header>

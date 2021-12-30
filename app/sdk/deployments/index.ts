@@ -27,8 +27,8 @@ export class DeployClient {
   private logger?: Logger;
   private shell: Shell;
 
-  constructor(options: DeployClientOptions) {
-    this.logger = options.logger;
+  constructor(options?: DeployClientOptions) {
+    this.logger = options?.logger;
     this.shell = new Shell(this.logger);
   }
 
@@ -46,20 +46,26 @@ export class DeployClient {
       throw new Error("Not implemented");
     },
     list: async (): Promise<string[]> => {
-      const { output } = await this.shell.execute("ls ~/deployments");
-      const dedupedWhitespaceOutput = output.replace(/(\s+)/g, " ");
-      const folders = dedupedWhitespaceOutput
-        .split(" ")
-        .map((f) => f.trim())
-        .filter((f) => f.length > 0);
-      return folders;
+      try {
+        const { output } = await this.shell.execute("ls ~/deployments");
+        const dedupedWhitespaceOutput = output.replace(/(\s+)/g, " ");
+        const folders = dedupedWhitespaceOutput
+          .split(" ")
+          .map((f) => f.trim())
+          .filter((f) => f.length > 0);
+        return folders;
+      } catch (error) {
+        return [];
+      }
     },
   };
 
   public readonly system = {
-    async getFreeDiskSpace(): Promise<string> {
-      // ..
-      throw new Error("Method not implemented.");
+    getFreeDiskSpace: async (): Promise<string> => {
+      const { output } = await this.shell.execute(
+        "df -Ph . | tail -1 | awk '{print $4}'"
+      );
+      return output;
     },
   };
 }
