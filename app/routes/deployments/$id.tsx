@@ -5,11 +5,8 @@ import invariant from "tiny-invariant";
 import { JobStatusBadge } from "~/components/JobStatusBadge";
 import { useSWRData } from "~/hooks/useSWRData";
 import { PushJob } from "~/jobs/push_job.server";
-import { getHumanReadableDateTime } from "~/utils/date";
-import {
-  DeploymentJobProgress,
-  getDeploymentProgress,
-} from "~/utils/deploy.server";
+import { getHumanReadableDateTime } from "~/lib/date";
+import { ProgressLog, JobProgressLogger } from "~/lib/logger";
 
 dayjs.extend(calendar);
 
@@ -23,7 +20,7 @@ interface JobData {
   processedOn: string;
   finishedOn: string;
   returnValue: any;
-  progress: DeploymentJobProgress;
+  progress?: ProgressLog;
 }
 
 interface LoaderData {
@@ -36,7 +33,9 @@ export let loader: LoaderFunction = async ({ params }): Promise<LoaderData> => {
   if (rawJob == null) {
     throw new Response("Not Found", { status: 404 });
   }
-  let progress = getDeploymentProgress(rawJob);
+  let progress = JobProgressLogger.isProgressLog(rawJob.progress)
+    ? rawJob.progress
+    : undefined;
   return {
     job: {
       id: params.id,
@@ -92,7 +91,7 @@ export default function Job() {
             <span className="text-xl font-medium">Logs</span>
           </div>
           <div className="px-4 py-5 sm:p-6 min-h-[200px]">
-            {job.progress.lines.map((line, index) => (
+            {job.progress?.lines.map((line, index) => (
               <pre key={index} className="whitespace-pre-wrap">
                 {line}
               </pre>

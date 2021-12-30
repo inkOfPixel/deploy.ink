@@ -1,11 +1,7 @@
 import { Job } from "bullmq";
-import {
-  createDeployment,
-  DeploymentParams,
-  listDeployments,
-  redeploy,
-} from "~/utils/deploy.server";
-import { BaseJob } from "~/utils/jobs.server";
+import { DeployClient } from "~/sdk/deployments";
+import { BaseJob } from "~/lib/jobs.server";
+import { JobProgressLogger } from "~/lib/logger";
 
 const queueName = "push";
 
@@ -22,17 +18,23 @@ export class PushJob extends BaseJob<PushJobPayload, PushJobResult> {
   protected async perform(job: Job<PushJobPayload>) {
     const branch = job.data.branch;
     const cloneUrl = job.data.cloneUrl;
-    const deployments = await listDeployments();
-    const params: DeploymentParams = {
-      branch,
-      cloneUrl,
-      deployPath: "",
-    };
+    const logger = new JobProgressLogger(job);
+    const client = new DeployClient({
+      logger,
+    });
+    const deployments = await client.deployments.list();
     if (deployments.includes(branch)) {
-      await redeploy(params, job);
+      await client.deployments.update({
+        branch,
+        rootDirectory: "",
+      });
       return `Redeployed branch "${branch}"`;
     }
-    await createDeployment(params, job);
+    await client.deployments.create({
+      branch,
+      cloneUrl,
+      rootDirectory: "",
+    });
     return `New deployment created for branch "${branch}"`;
   }
 

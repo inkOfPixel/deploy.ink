@@ -2,10 +2,7 @@ import dayjs from "dayjs";
 import { Link, LoaderFunction, useLoaderData } from "remix";
 import { JobStatusBadge } from "~/components/JobStatusBadge";
 import { PushJob } from "~/jobs/push_job.server";
-import {
-  getHumanReadableDateTime,
-  getHumanReadableDuration,
-} from "~/utils/date";
+import { getHumanReadableDateTime, getHumanReadableDuration } from "~/lib/date";
 
 interface JobData {
   id?: string;

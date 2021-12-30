@@ -1,34 +1,38 @@
 import { Job, Queue, QueueOptions, Worker, WorkerOptions } from "bullmq";
 import { connection } from "../../config/jobs";
 
-type TPayloadOf<Q> = Q extends BaseJob<infer T, any> ? T : never;
-type TReturnTypeOf<Q> = Q extends BaseJob<any, infer T> ? T : never;
+type PayloadOf<ConcreteJob> = ConcreteJob extends BaseJob<infer T, any>
+  ? T
+  : never;
+type ReturnTypeOf<ConcreteJob> = ConcreteJob extends BaseJob<any, infer T>
+  ? T
+  : never;
 
-export abstract class BaseJob<PayloadType = any, ResultType = any> {
+export abstract class BaseJob<PayloadType = any, ReturnType = any> {
   abstract readonly queueName: string;
-  private _queue: Queue<PayloadType, ResultType> | undefined;
+  private _queue: Queue<PayloadType, ReturnType> | undefined;
 
   startWorker(options?: WorkerOptions) {
-    return new Worker<PayloadType, ResultType>(
+    return new Worker<PayloadType, ReturnType>(
       this.queueName,
       this.perform,
       options
     );
   }
 
-  performLater(payload: PayloadType): Promise<Job<PayloadType, ResultType>> {
+  performLater(payload: PayloadType): Promise<Job<PayloadType, ReturnType>> {
     return this.queue.add(this.getJobName(payload), payload);
   }
 
-  static performLater<T extends BaseJob<TPayloadOf<T>, TReturnTypeOf<T>>>(
+  static performLater<T extends BaseJob<PayloadOf<T>, ReturnTypeOf<T>>>(
     this: { new (options?: QueueOptions): T },
-    payload: TPayloadOf<T>
+    payload: PayloadOf<T>
   ) {
     const queue = new this({ connection });
     return queue.performLater(payload);
   }
 
-  static startWorker<T extends BaseJob<TPayloadOf<T>, TReturnTypeOf<T>>>(
+  static startWorker<T extends BaseJob<PayloadOf<T>, ReturnTypeOf<T>>>(
     this: { new (): T },
     options: WorkerOptions
   ) {
@@ -36,7 +40,7 @@ export abstract class BaseJob<PayloadType = any, ResultType = any> {
     return instance.startWorker(options);
   }
 
-  async findMany(limit: number = 100): Promise<Job<PayloadType, ResultType>[]> {
+  async findMany(limit: number = 100): Promise<Job<PayloadType, ReturnType>[]> {
     const jobs = await this.queue.getJobs(
       ["active", "completed", "failed", "delayed", "wait", "paused", "repeat"],
       0,
@@ -46,7 +50,7 @@ export abstract class BaseJob<PayloadType = any, ResultType = any> {
     return jobs;
   }
 
-  static findMany<T extends BaseJob<TPayloadOf<T>, TReturnTypeOf<T>>>(
+  static findMany<T extends BaseJob<PayloadOf<T>, ReturnTypeOf<T>>>(
     this: { new (): T },
     limit?: number
   ) {
@@ -54,12 +58,12 @@ export abstract class BaseJob<PayloadType = any, ResultType = any> {
     return queue.findMany(limit);
   }
 
-  async find(id: string): Promise<Job<PayloadType, ResultType> | undefined> {
+  async find(id: string): Promise<Job<PayloadType, ReturnType> | undefined> {
     const job = await this.queue.getJob(id);
     return job;
   }
 
-  static find<T extends BaseJob<TPayloadOf<T>, TReturnTypeOf<T>>>(
+  static find<T extends BaseJob<PayloadOf<T>, ReturnTypeOf<T>>>(
     this: { new (): T },
     id: string
   ) {
@@ -68,14 +72,14 @@ export abstract class BaseJob<PayloadType = any, ResultType = any> {
   }
 
   protected abstract perform(
-    job: Job<PayloadType, ResultType>
-  ): Promise<ResultType>;
+    job: Job<PayloadType, ReturnType>
+  ): Promise<ReturnType>;
 
   protected abstract getJobName(payload: PayloadType): string;
 
-  private get queue(): Queue<PayloadType, ResultType> {
+  private get queue(): Queue<PayloadType, ReturnType> {
     if (!this._queue) {
-      this._queue = new Queue<PayloadType, ResultType>(this.queueName, {
+      this._queue = new Queue<PayloadType, ReturnType>(this.queueName, {
         connection,
       });
     }
