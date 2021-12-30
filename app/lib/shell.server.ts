@@ -88,6 +88,9 @@ export class Shell {
     if (typeof data === "string") {
       message = data;
     }
+    if (typeof data === "object" && data != null) {
+      message = data.toString();
+    }
     return message;
   }
 
@@ -95,6 +98,9 @@ export class Shell {
     let message = `! unknown error format: ${typeof error}`;
     if (typeof error === "string") {
       message = error;
+    }
+    if (typeof error === "object" && error != null) {
+      message = error.toString();
     }
     return message;
   }
