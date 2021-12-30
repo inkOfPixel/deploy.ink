@@ -67,5 +67,12 @@ export class DeployClient {
       );
       return output;
     },
+    getAvailableMemory: async (): Promise<string> => {
+      // free -h | gawk  '/Mem:/{print $2}'
+      const { output } = await this.shell.execute(
+        "free -h | awk '/Mem:/ {print $7}'"
+      );
+      return output;
+    },
   };
 }

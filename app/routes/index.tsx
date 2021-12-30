@@ -20,11 +20,12 @@ interface LoaderData {
 export let loader: LoaderFunction = async (): Promise<LoaderData> => {
   const client = new DeployClient();
   const freeDiskSpace = await client.system.getFreeDiskSpace();
+  const availableMemory = await client.system.getAvailableMemory();
   const deployments = await client.deployments.list();
   return {
     stats: [
       { name: "Free Disk Space", stat: freeDiskSpace },
-      { name: "Available memory", stat: "589MB" },
+      { name: "Available memory", stat: availableMemory },
       { name: "Deployments count", stat: deployments.length.toString() },
     ],
   };
