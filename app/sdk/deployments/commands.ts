@@ -117,7 +117,7 @@ function addPortToEnvFileCommand({
   });
   return {
     type: "spawn-command",
-    command: `echo "PORT=${port}" >> .env`,
+    command: `echo "HOST_PORT=${port}" >> .env`,
     useShellSyntax: true,
     workingDirectory,
   };
