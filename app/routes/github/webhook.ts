@@ -25,7 +25,7 @@ export const action: ActionFunction = async ({ request }) => {
     event,
   };
 
-  if (event === "push") {
+  if (event === "push" && payload.deleted === false) {
     const branch = payload.ref.replace("refs/heads/", "");
     response.branch = branch;
     response.pusher = payload.pusher.name;
@@ -33,6 +33,10 @@ export const action: ActionFunction = async ({ request }) => {
       branch,
       cloneUrl: payload.repository.clone_url,
     });
+  } else if (event === "delete" && payload.ref_type === "branch") {
+    const branch = payload.ref;
+    response.branch = branch;
+    // ..
   }
   return json(response, 200);
 };

@@ -1,8 +1,19 @@
 import getPort from "get-port";
 import { SpawnCommand, Log, MacroCommand } from "~/lib/shell.server";
+import {
+  DEPLOYMENTS_DIRECTORY,
+  DEPLOY_DOMAIN,
+  getBranchHandle,
+  getRepoDeployPath,
+  getRepoPath,
+} from "./helpers";
 
-const DEPLOYMENTS_DIRECTORY = "/home/ubuntu/deployments";
-
+/**
+ * @param branch - The branch to deploy.
+ * @param cloneUrl - The url to clone the repo from.
+ * @param rootDirectory - The root directory that contains the docker compose file.
+ * @returns The macro to deploy the repo.
+ */
 export interface CreateDeploymentParams {
   branch: string;
   cloneUrl: string;
@@ -44,31 +55,6 @@ export async function createDeploymentMacro({
   };
 }
 
-export interface UpdateDeploymentParams {
-  branch: string;
-  rootDirectory?: string;
-}
-
-export function updateDeploymentMacro({
-  branch,
-  rootDirectory,
-}: UpdateDeploymentParams): MacroCommand {
-  const branchHandle = getBranchHandle(branch);
-  return {
-    type: "macro",
-    commands: [
-      log("Prune inactive deployments.."),
-      dockerSystemPruneCommand(),
-      log("\nPulling latest changes.."),
-      pullLatestChangesCommand({ branchHandle }),
-      log("\nBuild new image.."),
-      buildNewImageCommand({ branchHandle, rootDirectory }),
-      log("\nRestart containers.."),
-      restartContainersCommand({ branchHandle, rootDirectory }),
-    ],
-  };
-}
-
 function log(message: string): Log {
   return {
     type: "log",
@@ -81,7 +67,6 @@ function dockerSystemPruneCommand(): SpawnCommand {
     type: "spawn-command",
     command: "docker",
     args: ["system", "prune", "-a", "--volumes", "-f"],
-    workingDirectory: DEPLOYMENTS_DIRECTORY,
   };
 }
 
@@ -153,17 +138,42 @@ interface AddCaddyRouteCommandParams {
 function addCaddyRouteCommand({
   port,
   branchHandle,
-  rootDirectory,
 }: AddCaddyRouteCommandParams): SpawnCommand {
-  const workingDirectory = getRepoDeployPath({
-    rootDirectory,
-    branchHandle,
-  });
   return {
     type: "spawn-command",
-    command: `curl localhost:2019/config/apps/http/servers/dashboard/routes -X POST -H "Content-Type: application/json" -d '{ "handle": [ { "handler": "reverse_proxy", "transport": { "protocol": "http" }, "upstreams": [ { "dial": "localhost:${port}" } ] } ], "match": [ { "host": [ "${branchHandle}.deploy.ink" ] } ] }'`,
+    command: `curl localhost:2019/config/apps/http/servers/dashboard/routes -X POST -H "Content-Type: application/json" -d '{ "@id": "${branchHandle}", "handle": [ { "handler": "reverse_proxy", "transport": { "protocol": "http" }, "upstreams": [ { "dial": "localhost:${port}" } ] } ], "match": [ { "host": [ "${branchHandle}.${DEPLOY_DOMAIN}" ] } ] }'`,
     useShellSyntax: true,
-    workingDirectory,
+  };
+}
+
+/**
+ * @param branch - The branch to redeploy.
+ * @param rootDirectory - The root directory that contains the docker compose file.
+ * @returns The macro to redeploy the branch.
+ * @description This command will pull the latest changes from the repo, build a new image, and restart the containers.
+ */
+export interface UpdateDeploymentParams {
+  branch: string;
+  rootDirectory?: string;
+}
+
+export function updateDeploymentMacro({
+  branch,
+  rootDirectory,
+}: UpdateDeploymentParams): MacroCommand {
+  const branchHandle = getBranchHandle(branch);
+  return {
+    type: "macro",
+    commands: [
+      log("Prune inactive deployments.."),
+      dockerSystemPruneCommand(),
+      log("\nPulling latest changes.."),
+      pullLatestChangesCommand({ branchHandle }),
+      log("\nBuild new image.."),
+      buildNewImageCommand({ branchHandle, rootDirectory }),
+      log("\nRestart containers.."),
+      restartContainersCommand({ branchHandle, rootDirectory }),
+    ],
   };
 }
 
@@ -204,7 +214,7 @@ function buildNewImageCommand({
   };
 }
 
-interface restartContainersCommandParams {
+interface RestartContainersCommandParams {
   branchHandle: string;
   rootDirectory?: string;
 }
@@ -212,7 +222,7 @@ interface restartContainersCommandParams {
 function restartContainersCommand({
   branchHandle,
   rootDirectory,
-}: restartContainersCommandParams): SpawnCommand {
+}: RestartContainersCommandParams): SpawnCommand {
   const workingDirectory = getRepoDeployPath({
     branchHandle,
     rootDirectory,
@@ -225,33 +235,82 @@ function restartContainersCommand({
   };
 }
 
-// UTILS
+/**
+ * @param branch - The branch to destroy.
+ * @param rootDirectory - The root directory that contains the docker compose file.
+ * @returns The macro to remove the branch deployment.
+ */
+export interface DestroyDeploymentParams {
+  branch: string;
+  rootDirectory?: string;
+}
 
-interface GetRepoDeployPathParams {
+export function destroyDeploymentMacro({
+  branch,
+  rootDirectory,
+}: DestroyDeploymentParams): MacroCommand {
+  const branchHandle = getBranchHandle(branch);
+  return {
+    type: "macro",
+    commands: [
+      log("\nRemove caddy route.."),
+      removeCaddyRouteCommand({ branchHandle }),
+      log("\nStop containers.."),
+      stopContainersCommand({ branchHandle, rootDirectory }),
+      log("Prune unused stuff.."),
+      dockerSystemPruneCommand(),
+      log("\nRemove deployment folder.."),
+      removeDeploymentFolder({ branchHandle }),
+    ],
+  };
+}
+
+interface RemoveCaddyRouteCommandParams {
+  branchHandle: string;
+}
+
+function removeCaddyRouteCommand({
+  branchHandle,
+}: RemoveCaddyRouteCommandParams): SpawnCommand {
+  return {
+    type: "spawn-command",
+    command: `curl -X DELETE localhost:2019/id/${branchHandle}`,
+    useShellSyntax: true,
+  };
+}
+
+interface StopContainersCommandParams {
   branchHandle: string;
   rootDirectory?: string;
 }
 
-function getRepoDeployPath(params: GetRepoDeployPathParams) {
-  const repoPath = getRepoPath(params.branchHandle);
-  const deployPath = params.rootDirectory
-    ? getRelativePath(params.rootDirectory)
-    : "";
-  let cwd = repoPath;
-  if (deployPath.length > 0) {
-    cwd += `/${deployPath}`;
-  }
-  return cwd;
+function stopContainersCommand({
+  branchHandle,
+  rootDirectory,
+}: StopContainersCommandParams): SpawnCommand {
+  const workingDirectory = getRepoDeployPath({
+    branchHandle,
+    rootDirectory,
+  });
+  return {
+    type: "spawn-command",
+    command: "docker",
+    args: ["compose", "down"],
+    workingDirectory,
+  };
 }
 
-function getRepoPath(branchHandle: string) {
-  return `${DEPLOYMENTS_DIRECTORY}/${branchHandle}`;
+interface RemoveDeploymentFolderParams {
+  branchHandle: string;
 }
 
-function getRelativePath(path: string) {
-  return path.replace(/\/$/g, "").replace(/^\//g, "");
-}
-
-function getBranchHandle(branch: string) {
-  return branch.replace(/\//g, "-");
+function removeDeploymentFolder({
+  branchHandle,
+}: RemoveDeploymentFolderParams): SpawnCommand {
+  return {
+    type: "spawn-command",
+    command: `rm -rf ${branchHandle}`,
+    useShellSyntax: true,
+    workingDirectory: DEPLOYMENTS_DIRECTORY,
+  };
 }

@@ -1,6 +1,10 @@
 import { Logger } from "~/lib/logger";
 import { Shell } from "~/lib/shell.server";
-import { createDeploymentMacro, updateDeploymentMacro } from "./commands";
+import {
+  createDeploymentMacro,
+  destroyDeploymentMacro,
+  updateDeploymentMacro,
+} from "./commands";
 
 export interface DeployClientOptions {
   logger?: Logger;
@@ -16,6 +20,14 @@ interface CreateDeploymentOptions {
 }
 
 interface UpdateDeploymentOptions {
+  branch: string;
+  /**
+   * The path where the docker compose file is located within the repo.
+   */
+  rootDirectory?: string;
+}
+
+interface DestroyDeploymentOptions {
   branch: string;
   /**
    * The path where the docker compose file is located within the repo.
@@ -41,9 +53,9 @@ export class DeployClient {
       const updateMacro = updateDeploymentMacro(options);
       await this.shell.run(updateMacro);
     },
-    destroy: async (options: UpdateDeploymentOptions): Promise<void> => {
-      // ..
-      throw new Error("Not implemented");
+    destroy: async (options: DestroyDeploymentOptions): Promise<void> => {
+      const destroyMacro = destroyDeploymentMacro(options);
+      await this.shell.run(destroyMacro);
     },
     list: async (): Promise<string[]> => {
       try {
