@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { ActionFunction, json } from "remix";
+import { DeleteDeploymentJob } from "~/jobs/delete_deployment_job";
 import { PushJob } from "~/jobs/push_job.server";
 
 export const action: ActionFunction = async ({ request }) => {
@@ -36,7 +37,13 @@ export const action: ActionFunction = async ({ request }) => {
   } else if (event === "delete" && payload.ref_type === "branch") {
     const branch = payload.ref;
     response.branch = branch;
-    // ..
+    await DeleteDeploymentJob.performLater({
+      branch,
+      sender: {
+        login: payload.sender.login,
+        avatar_url: payload.sender.avatar_url,
+      },
+    });
   }
   return json(response, 200);
 };
