@@ -22,7 +22,7 @@
     "@heroicons/react": "1.0.5",
     "@remix-run/react": "1.1.1",
     "@remix-run/serve": "1.1.1",
-    "bullmq": "1.59.2",
+    "bullmq": "1.63.0",
     "dayjs": "1.10.7",
     "faker": "5.5.3",
     "get-port": "5.1.1",
