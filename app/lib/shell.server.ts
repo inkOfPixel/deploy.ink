@@ -13,8 +13,9 @@ export interface Command {
 export interface SpawnCommand {
   type: "spawn-command";
   command: string;
-  args: string[];
+  args?: string[] | undefined;
   workingDirectory?: string;
+  useShellSyntax?: boolean;
 }
 
 export interface MacroCommand {
@@ -46,7 +47,7 @@ export class Shell {
       case "command":
         return this.execute(program);
       case "spawn-command":
-        await this.spawnCommand(program);
+        await this.spawn(program);
         return;
       case "macro":
         for (let i = 0; i < program.commands.length; i++) {
@@ -70,10 +71,11 @@ export class Shell {
     };
   }
 
-  private spawnCommand(command: SpawnCommand): Promise<void> {
+  private spawn(command: SpawnCommand): Promise<void> {
     return new Promise((resolve, reject) => {
       const commandProcess = child.spawn(command.command, command.args, {
         cwd: command.workingDirectory,
+        shell: command.useShellSyntax,
       });
       commandProcess.stdout.on("data", (data) => {
         this.logger?.info(this.convertInfoToMessage(data));
