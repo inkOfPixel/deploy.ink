@@ -25,18 +25,18 @@ export async function createDeploymentMacro({
       cloneRepoCommand({ branch, path: branchHandle, cloneUrl }),
       log("\nAdd port to env file.."),
       addPortToEnvFileCommand({
-        branchHandle: branchHandle,
+        branchHandle,
         port,
         rootDirectory,
       }),
       log("\nStart containers.."),
       dockerStartContainersCommand({
-        branchHandle: branchHandle,
+        branchHandle,
         rootDirectory,
       }),
       log("\nAdd caddy route.."),
       addCaddyRouteCommand({
-        branchHandle: branchHandle,
+        branchHandle,
         port,
         rootDirectory,
       }),
@@ -161,16 +161,8 @@ function addCaddyRouteCommand({
   });
   return {
     type: "spawn-command",
-    command: "curl",
-    args: [
-      "localhost:2019/config/apps/http/servers/dashboard/routes",
-      "-X",
-      "POST",
-      "-H",
-      `"Content-Type: application/json"`,
-      "-d",
-      `'{ "handle": [ { "handler": "reverse_proxy", "transport": { "protocol": "http" }, "upstreams": [ { "dial": "localhost:${port}" } ] } ], "match": [ { "host": [ "${branchHandle}.deploy.ink" ] } ] }'`,
-    ],
+    command: `curl localhost:2019/config/apps/http/servers/dashboard/routes -X POST -H "Content-Type: application/json" -d '{ "handle": [ { "handler": "reverse_proxy", "transport": { "protocol": "http" }, "upstreams": [ { "dial": "localhost:${port}" } ] } ], "match": [ { "host": [ "${branchHandle}.deploy.ink" ] } ] }'`,
+    useShellSyntax: true,
     workingDirectory,
   };
 }
