@@ -1,3 +1,4 @@
+import "./fetch-polyfill";
 import { DeleteDeploymentJob } from "~/jobs/delete_deployment_job.server";
 import { PushJob } from "../app/jobs/push_job.server";
 import { connection } from "../config/jobs";
