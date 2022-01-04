@@ -13,6 +13,7 @@ import {
   dockerComposeDownCommand,
 } from "./commands";
 import { getBranchHandle, getRepoDeployPath } from "./helpers";
+import fs from "fs/promises";
 
 export interface DeployClientOptions {
   logger?: Logger;
@@ -186,14 +187,11 @@ export class DeployClient {
         rootDirectory,
         branchHandle,
       });
-      const result = await this.shell.run({
-        type: "command",
-        command: `cat ${deployPath}/.env`,
-      });
+      const result = await fs.readFile(`${deployPath}/.env`, "utf8");
       if (result == null) {
         return undefined;
       }
-      const match = result.output.match(/HOST_PORT=(\d+)/);
+      const match = result.match(/HOST_PORT=(\d+)/);
       if (match && match[1]) {
         return parseInt(match[1], 10);
       }
