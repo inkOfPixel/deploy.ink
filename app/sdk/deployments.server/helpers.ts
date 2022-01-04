@@ -1,6 +1,4 @@
-export const DEPLOYMENTS_DIRECTORY = "/home/ubuntu/deployments";
-
-export const DEPLOY_DOMAIN = "deploy.ink";
+import { DEPLOYMENTS_DIRECTORY } from "~/../config/env";
 
 interface GetRepoDeployPathOptions {
   branchHandle: string;

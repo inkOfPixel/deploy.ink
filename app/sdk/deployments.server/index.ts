@@ -1,26 +1,26 @@
+import getPort from "get-port";
 import { Logger } from "~/lib/logger";
 import { Shell } from "~/lib/shell.server";
 import {
-  createDeploymentMacro,
-  destroyDeploymentMacro,
-  updateDeploymentMacro,
+  addCaddyRouteCommand,
+  addPortToEnvFileCommand,
+  cloneRepoCommand,
+  dockerComposeUpCommand,
+  dockerSystemPruneCommand,
+  pullLatestChangesCommand,
+  removeCaddyRouteCommand,
+  removeDeploymentFolder,
+  dockerComposeDownCommand,
 } from "./commands";
+import { getBranchHandle, getRepoDeployPath } from "./helpers";
 
 export interface DeployClientOptions {
   logger?: Logger;
 }
 
-interface CreateDeploymentOptions {
+interface DeploymentOptions {
   branch: string;
   cloneUrl: string;
-  /**
-   * The path where the docker compose file is located within the repo.
-   */
-  rootDirectory?: string;
-}
-
-interface UpdateDeploymentOptions {
-  branch: string;
   /**
    * The path where the docker compose file is located within the repo.
    */
@@ -45,17 +45,90 @@ export class DeployClient {
   }
 
   public readonly deployments = {
-    create: async (options: CreateDeploymentOptions): Promise<void> => {
-      const createMacro = await createDeploymentMacro(options);
-      await this.shell.run(createMacro);
-    },
-    update: async (options: UpdateDeploymentOptions): Promise<void> => {
-      const updateMacro = updateDeploymentMacro(options);
-      await this.shell.run(updateMacro);
+    /**
+     * Idempotent method to create a deployment.
+     * @param options - The options to create the deployment.
+     * @returns A promise that resolves when the deployment is created.
+     */
+    deploy: async (options: DeploymentOptions): Promise<void> => {
+      const handle = getBranchHandle(options.branch);
+      await this.shell.run(dockerSystemPruneCommand());
+      const deploymentExists = await this.deployments.exists(options.branch);
+      if (deploymentExists) {
+        await this.log.info(
+          `Deployment for branch "${options.branch}" already exists. Pulling latest changes to update.`
+        );
+        await this.shell.run(
+          pullLatestChangesCommand({ branchHandle: handle })
+        );
+      } else {
+        await this.log.info(
+          `Creating deployment assets for branch "${options.branch}".`
+        );
+        await this.shell.run(
+          cloneRepoCommand({
+            branch: options.branch,
+            cloneUrl: options.cloneUrl,
+            path: handle,
+          })
+        );
+      }
+      let port = await this.queries.getDeploymentPort(
+        options.branch,
+        options.rootDirectory
+      );
+      if (port == null) {
+        await this.log.info("No port found. Getting a new one..");
+        port = await getPort();
+        await this.shell.run(
+          addPortToEnvFileCommand({
+            port,
+            branchHandle: handle,
+            rootDirectory: options.rootDirectory,
+          })
+        );
+      }
+      await this.log.info("Starting deployment..");
+      await this.shell.run(
+        dockerComposeUpCommand({
+          branchHandle: handle,
+          rootDirectory: options.rootDirectory,
+        })
+      );
+      const hasDomainRoute = await this.queries.hasDomainRoute(handle);
+      if (!hasDomainRoute) {
+        await this.log.info("Assigning domain to deployment..");
+        await this.shell.run(
+          addCaddyRouteCommand({
+            port,
+            branchHandle: handle,
+            rootDirectory: options.rootDirectory,
+          })
+        );
+      }
     },
     destroy: async (options: DestroyDeploymentOptions): Promise<void> => {
-      const destroyMacro = destroyDeploymentMacro(options);
-      await this.shell.run(destroyMacro);
+      const handle = getBranchHandle(options.branch);
+      const hasDomainRoute = await this.queries.hasDomainRoute(handle);
+      if (hasDomainRoute) {
+        await this.log.info("Removing domain from deployment..");
+        await this.shell.run(
+          removeCaddyRouteCommand({
+            branchHandle: handle,
+          })
+        );
+      }
+      await this.log.info("Stopping deployment..");
+      await this.shell.run(
+        dockerComposeDownCommand({
+          branchHandle: handle,
+          rootDirectory: options.rootDirectory,
+        })
+      );
+      await this.log.info("Prune unused docker stuff..");
+      await this.shell.run(dockerSystemPruneCommand());
+      await this.log.info("Destroying deployment assets..");
+      await this.shell.run(removeDeploymentFolder({ branchHandle: handle }));
     },
     list: async (): Promise<string[]> => {
       try {
@@ -73,6 +146,11 @@ export class DeployClient {
         }
       } catch (error) {}
       return [];
+    },
+    exists: async (branch: string): Promise<boolean> => {
+      const branchHandle = getBranchHandle(branch);
+      const deployments = await this.deployments.list();
+      return deployments.includes(branchHandle);
     },
   };
 
@@ -96,6 +174,55 @@ export class DeployClient {
         throw new Error("Failed to get available memory");
       }
       return result.output;
+    },
+  };
+
+  private readonly queries = {
+    getDeploymentPort: async (
+      branchHandle: string,
+      rootDirectory?: string
+    ): Promise<number | undefined> => {
+      const deployPath = getRepoDeployPath({
+        rootDirectory,
+        branchHandle,
+      });
+      const result = await this.shell.run({
+        type: "command",
+        command: `cat ${deployPath}/.env`,
+      });
+      if (result == null) {
+        return undefined;
+      }
+      const match = result.output.match(/HOST_PORT=(\d+)/);
+      if (match && match[1]) {
+        return parseInt(match[1], 10);
+      }
+      return undefined;
+    },
+    hasDomainRoute: async (branchHandle: string): Promise<boolean> => {
+      const response = await fetch(`http://localhost:2019/id/${branchHandle}`);
+      if (response.ok) {
+        const json = await response.json();
+        return json?.["@id"] === branchHandle;
+      }
+      return false;
+    },
+  };
+
+  private readonly log = {
+    info: async (message: string): Promise<void> => {
+      if (this.logger) {
+        await this.logger.info(message);
+      } else {
+        console.log(message);
+      }
+    },
+    error: async (message: string): Promise<void> => {
+      if (this.logger) {
+        await this.logger.error(message);
+      } else {
+        console.error(message);
+      }
     },
   };
 }

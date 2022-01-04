@@ -22,20 +22,12 @@ export class PushJob extends BaseJob<PushJobPayload, PushJobResult> {
     const client = new DeployClient({
       logger,
     });
-    const deployments = await client.deployments.list();
-    if (deployments.includes(branch)) {
-      await client.deployments.update({
-        branch,
-        rootDirectory: "",
-      });
-      return `Redeployed branch "${branch}"`;
-    }
-    await client.deployments.create({
+    await client.deployments.deploy({
       branch,
       cloneUrl,
       rootDirectory: "",
     });
-    return `New deployment created for branch "${branch}"`;
+    return `Deployed branch "${branch}"`;
   }
 
   protected getJobName(payload: PushJobPayload): string {
