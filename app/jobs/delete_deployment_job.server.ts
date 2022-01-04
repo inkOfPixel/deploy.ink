@@ -1,5 +1,5 @@
 import { Job } from "bullmq";
-import { DeployClient } from "~/sdk/deployments";
+import { DeployClient } from "~/sdk/deployments.server";
 import { BaseJob } from "~/lib/jobs.server";
 import { JobProgressLogger } from "~/lib/logger";
 

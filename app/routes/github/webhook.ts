@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { ActionFunction, json } from "remix";
-import { DeleteDeploymentJob } from "~/jobs/delete_deployment_job";
+import { DeleteDeploymentJob } from "~/jobs/delete_deployment_job.server";
 import { PushJob } from "~/jobs/push_job.server";
 
 export const action: ActionFunction = async ({ request }) => {
