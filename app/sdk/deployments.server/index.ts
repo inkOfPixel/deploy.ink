@@ -187,14 +187,16 @@ export class DeployClient {
         rootDirectory,
         branchHandle,
       });
-      const result = await fs.readFile(`${deployPath}/.env`, "utf8");
-      if (result == null) {
-        return undefined;
-      }
-      const match = result.match(/HOST_PORT=(\d+)/);
-      if (match && match[1]) {
-        return parseInt(match[1], 10);
-      }
+      try {
+        const result = await fs.readFile(`${deployPath}/.env`, "utf8");
+        if (result == null) {
+          return undefined;
+        }
+        const match = result.match(/HOST_PORT=(\d+)/);
+        if (match && match[1]) {
+          return parseInt(match[1], 10);
+        }
+      } catch (error) {}
       return undefined;
     },
     hasDomainRoute: async (branchHandle: string): Promise<boolean> => {
