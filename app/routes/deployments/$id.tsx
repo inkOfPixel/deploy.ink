@@ -182,14 +182,14 @@ export default function Job() {
       </header>
       <main>
         <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-          <div className="px-4 py-8 sm:px-0">
+          <div className="px-4 sm:px-0">
             {/* Logs */}
-            <div className="flex flex-col mt-10 text-white">
-              <div className="bg-gray-800 overflow-hidden shadow rounded-lg divide-y divide-gray-700">
+            <div className="flex flex-col mt-10">
+              <div className="bg-white overflow-hidden shadow rounded-lg divide-y divide-gray-100">
                 <div className="px-4 py-5 sm:px-6">
                   <span className="text-xl font-medium">Logs</span>
                 </div>
-                <div className="px-4 py-5 sm:p-6 min-h-[200px]">
+                <div className="px-4 py-5 sm:p-6 min-h-[200px] bg-gray-800 text-gray-300">
                   {job.progress?.lines.map((line, index) => (
                     <pre key={index} className="whitespace-pre-wrap">
                       {line}

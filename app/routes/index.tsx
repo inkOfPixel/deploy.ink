@@ -33,7 +33,6 @@ export let loader: LoaderFunction = async (): Promise<LoaderData> => {
 
 export default function Index() {
   const { stats } = useLoaderData<LoaderData>();
-  console.log("stats", stats);
   return (
     <>
       <header>
