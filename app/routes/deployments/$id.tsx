@@ -12,7 +12,7 @@ import { LoaderFunction } from "remix";
 import invariant from "tiny-invariant";
 import { JobStatusBadge } from "~/components/JobStatusBadge";
 import { useSWRData } from "~/hooks/useSWRData";
-import { PushJob, PushJobPayload } from "~/jobs/push_job.server";
+import { PushJob, PushJobPayload } from "~/jobs/push-job.server";
 import { getHumanReadableDateTime } from "~/lib/date";
 import { JobProgressLogger, ProgressLog } from "~/lib/logger";
 import { classNames } from "~/lib/styles";

@@ -1,6 +1,6 @@
 import "./fetch-polyfill";
-import { DeleteDeploymentJob } from "~/jobs/delete_deployment_job.server";
-import { PushJob } from "../app/jobs/push_job.server";
+import { DeleteDeploymentJob } from "~/jobs/delete-deployment-job.server";
+import { PushJob } from "../app/jobs/push-job.server";
 import { connection } from "../config/jobs";
 
 checkRedisConnection().then(() => {

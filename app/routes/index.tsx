@@ -17,7 +17,9 @@ interface LoaderData {
   stats: Stat[];
 }
 
-export let loader: LoaderFunction = async (): Promise<LoaderData> => {
+export let loader: LoaderFunction = async ({
+  request,
+}): Promise<LoaderData> => {
   const client = new DeployClient();
   const freeDiskSpace = await client.system.getFreeDiskSpace();
   const availableMemory = await client.system.getAvailableMemory();

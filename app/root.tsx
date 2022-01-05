@@ -1,18 +1,20 @@
 import { Disclosure } from "@headlessui/react";
 import { MenuIcon, XIcon } from "@heroicons/react/outline";
 import * as React from "react";
-import type { MetaFunction } from "remix";
 import {
   Links,
   LinksFunction,
   LiveReload,
+  LoaderFunction,
   Meta,
+  MetaFunction,
   NavLink,
   Outlet,
   Scripts,
   ScrollRestoration,
 } from "remix";
 import { classNames } from "~/lib/styles";
+import { requireAuthorization } from "~/lib/session.server";
 import styles from "./styles.css";
 
 export let links: LinksFunction = () => {
@@ -20,6 +22,16 @@ export let links: LinksFunction = () => {
 };
 export const meta: MetaFunction = () => {
   return { title: "Deploy.ink" };
+};
+
+interface LoaderData {}
+
+export let loader: LoaderFunction = async ({
+  request,
+}): Promise<LoaderData> => {
+  await requireAuthorization(request);
+
+  return {};
 };
 
 export default function App() {
