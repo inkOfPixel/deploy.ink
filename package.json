@@ -13,7 +13,7 @@
     "dev:redis": "docker compose up",
     "postinstall": "remix setup node",
     "start": "npm run start:remix & npm run start:workers",
-    "start:remix": "remix-serve build",
+    "start:remix": "node -r dotenv/config node_modules/.bin/remix-serve build",
     "start:workers": "cross-env NODE_ENV=production ts-node --transpile-only -r tsconfig-paths/register workers/index.ts",
     "deploy": "./deploy.sh"
   },
