@@ -1,7 +1,7 @@
 import child from "child_process";
 import { Logger } from "./logger";
 import { promisify } from "util";
-import { assertNever } from "~/helpers";
+import { assertNever } from "~/helpers/application-helpers";
 
 const exec = promisify(child.exec);
 

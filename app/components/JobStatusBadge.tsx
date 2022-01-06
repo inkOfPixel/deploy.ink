@@ -1,4 +1,4 @@
-import { classNames } from "~/lib/styles";
+import { classNames } from "~/helpers/ui-helpers";
 
 export interface JobStatusBadgeProps {
   className?: string;

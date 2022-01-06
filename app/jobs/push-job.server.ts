@@ -1,7 +1,7 @@
 import { Job } from "bullmq";
-import { DeployClient } from "~/sdk/deployments.server";
 import { BaseJob } from "~/lib/jobs.server";
 import { JobProgressLogger } from "~/lib/logger";
+import { deploy } from "~/models/deployment.server";
 
 const queueName = "push";
 
@@ -19,13 +19,11 @@ export class PushJob extends BaseJob<PushJobPayload, PushJobResult> {
     const branch = job.data.branch;
     const cloneUrl = job.data.cloneUrl;
     const logger = new JobProgressLogger(job);
-    const client = new DeployClient({
-      logger,
-    });
-    await client.deployments.deploy({
+    await deploy({
       branch,
       cloneUrl,
       rootDirectory: "",
+      logger,
     });
     return `Deployed branch "${branch}"`;
   }

@@ -1,7 +1,6 @@
 import { Menu, Transition } from "@headlessui/react";
 import {
   CalendarIcon,
-  CheckIcon,
   ChevronDownIcon,
   LinkIcon,
 } from "@heroicons/react/solid";
@@ -11,11 +10,11 @@ import { Fragment } from "react";
 import { LoaderFunction } from "remix";
 import invariant from "tiny-invariant";
 import { JobStatusBadge } from "~/components/JobStatusBadge";
-import { useSWRData } from "~/hooks/useSWRData";
+import { getHumanReadableDateTime } from "~/helpers/date-helpers";
+import { classNames } from "~/helpers/ui-helpers";
 import { PushJob, PushJobPayload } from "~/jobs/push-job.server";
-import { getHumanReadableDateTime } from "~/lib/date";
+import { useSWRData } from "~/lib/hooks";
 import { JobProgressLogger, ProgressLog } from "~/lib/logger";
-import { classNames } from "~/lib/styles";
 
 dayjs.extend(calendar);
 

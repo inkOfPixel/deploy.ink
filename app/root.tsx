@@ -13,7 +13,7 @@ import {
   Scripts,
   ScrollRestoration,
 } from "remix";
-import { classNames } from "~/lib/styles";
+import { classNames } from "~/helpers/ui-helpers";
 import { requireAuthorization } from "~/lib/session.server";
 import styles from "./styles.css";
 
@@ -72,7 +72,7 @@ function Layout({ children }: React.PropsWithChildren<{}>) {
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
                       <p className="text-2xl text-white font-bold tracking-tight">
-                        🚀 Deploy.ink
+                        🚀 Govinor
                       </p>
                     </div>
                     <div className="hidden md:block">
